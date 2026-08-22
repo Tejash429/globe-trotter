@@ -281,9 +281,9 @@ export default function ItineraryBuilderPage({
               <span>Back to Dashboard</span>
             </Link>
             <span className="text-border-muted">•</span>
-            <span className="stamp-badge text-[11px]">
+            {/* <span className="stamp-badge text-[11px]">
               SCREEN 5 • ITINERARY BUILDER
-            </span>
+            </span> */}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -401,7 +401,7 @@ export default function ItineraryBuilderPage({
               </div>
 
               {/* Budget Allocation Progress Bar */}
-              <div className="space-y-1.5 pt-2 route-divider">
+              <div className="space-y-1.5 pt-2">
                 <div className="flex items-center justify-between font-mono text-xs">
                   <span className="text-muted-foreground flex items-center gap-1">
                     <DollarSign className="w-3.5 h-3.5 text-teal-primary" />
@@ -422,6 +422,9 @@ export default function ItineraryBuilderPage({
               </div>
             </Card>
 
+            {/* Map Route Dashed Divider outside the Card */}
+            <div className="route-divider my-2" />
+
             {/* Section Stops Timeline Container */}
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between route-divider pb-2">
@@ -431,9 +434,9 @@ export default function ItineraryBuilderPage({
                     Itinerary Stops ({sections.length})
                   </h2>
                 </div>
-                <span className="font-mono text-xs text-muted-foreground uppercase">
+                {/* <span className="font-mono text-xs text-muted-foreground uppercase">
                   Click any stop to add & manage activities
-                </span>
+                </span> */}
               </div>
 
               {/* Empty State */}
@@ -587,25 +590,7 @@ export default function ItineraryBuilderPage({
               )}
             </div>
 
-            {/* Bottom Actions Row */}
-            <div className="flex items-center justify-between pt-4 route-divider">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push("/dashboard")}
-              >
-                Back to Dashboard
-              </Button>
 
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => router.push(`/trips/${tripId}`)}
-                rightIcon={<Eye className="w-4 h-4" />}
-              >
-                Preview Completed Itinerary
-              </Button>
-            </div>
           </>
         )}
       </main>

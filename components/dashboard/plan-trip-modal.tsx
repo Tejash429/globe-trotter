@@ -13,6 +13,7 @@ import {
   Input,
   Textarea,
   Alert,
+  toast,
 } from "@/components/ui";
 import { Plus, Calendar, MapPin, DollarSign, Compass, Search, Loader2 } from "lucide-react";
 
@@ -52,7 +53,6 @@ export function PlanTripModal({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
   // Close dropdown when clicking outside
@@ -107,23 +107,33 @@ export function PlanTripModal({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+      // If start date is set and end date is before start date, reset end date to start date
+      if (name === "startDate" && prev.endDate && prev.endDate < value) {
+        updated.endDate = value;
+      }
+      return updated;
+    });
   };
+
+  // Enforce all 5 required parameters: Title, Start Date, End Date, Destination, Budget (>0)
+  const isFormValid =
+    formData.title.trim().length > 0 &&
+    formData.destinationPlace.trim().length > 0 &&
+    formData.startDate !== "" &&
+    formData.endDate !== "" &&
+    formData.endDate >= formData.startDate &&
+    formData.totalBudget.trim() !== "" &&
+    !isNaN(parseFloat(formData.totalBudget)) &&
+    parseFloat(formData.totalBudget) > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!formData.title.trim()) {
-      setError("Please provide a title for your trip.");
-      return;
-    }
-    if (!formData.destinationPlace.trim()) {
-      setError("Please specify a valid destination city or state.");
-      return;
-    }
-    if (!formData.startDate || !formData.endDate) {
-      setError("Please specify both start and end travel dates.");
+    if (!isFormValid) {
+      setError("Please fill all 5 required details: Title, Start Date, End Date, Destination, and Budget (> 0).");
       return;
     }
 
@@ -163,28 +173,30 @@ export function PlanTripModal({
         throw new Error(errorMsg);
       }
 
-      setSuccess(true);
       const createdTrip = data.data.trip;
+
+      // Trigger Toast notification
+      toast.success(
+        "Trip Passport Created",
+        `Expedition "${createdTrip?.title || formData.title}" has been successfully created!`
+      );
+
+      // Reset form & close modal
+      setFormData({
+        title: "",
+        destinationPlace: "",
+        startDate: "",
+        endDate: "",
+        totalBudget: "",
+        description: "",
+      });
+      onClose();
 
       if (onTripCreated) {
         onTripCreated(createdTrip);
+      } else if (createdTrip?.id) {
+        router.push(`/trips/${createdTrip.id}/builder`);
       }
-
-      setTimeout(() => {
-        setSuccess(false);
-        setFormData({
-          title: "",
-          destinationPlace: "",
-          startDate: "",
-          endDate: "",
-          totalBudget: "",
-          description: "",
-        });
-        onClose();
-        if (createdTrip?.id) {
-          router.push(`/trips/${createdTrip.id}/builder`);
-        }
-      }, 1000);
     } catch (err: any) {
       setError(err.message || "Failed to create trip. Please try again.");
     } finally {
@@ -209,12 +221,6 @@ export function PlanTripModal({
             </Alert>
           )}
 
-          {success && (
-            <Alert variant="success" badgeText="CREATED">
-              Trip passport created successfully!
-            </Alert>
-          )}
-
           {/* Trip Title */}
           <Input
             id="trip-title"
@@ -235,6 +241,7 @@ export function PlanTripModal({
               type="date"
               label="Start Date"
               value={formData.startDate}
+              min={new Date().toISOString().split("T")[0]}
               onChange={handleChange}
               leftIcon={<Calendar className="w-4 h-4 text-amber-accent/70" />}
               required
@@ -245,6 +252,7 @@ export function PlanTripModal({
               type="date"
               label="End Date"
               value={formData.endDate}
+              min={formData.startDate || new Date().toISOString().split("T")[0]}
               onChange={handleChange}
               leftIcon={<Calendar className="w-4 h-4 text-amber-accent/70" />}
               required
@@ -312,11 +320,13 @@ export function PlanTripModal({
               id="totalBudget"
               name="totalBudget"
               type="number"
+              min="1"
               label="Target Budget ($USD)"
               value={formData.totalBudget}
               onChange={handleChange}
               placeholder="e.g. 2500"
               leftIcon={<DollarSign className="w-4 h-4 text-teal-primary/70" />}
+              required
             />
           </div>
 
@@ -347,6 +357,7 @@ export function PlanTripModal({
             variant="primary"
             size="sm"
             isLoading={isLoading}
+            disabled={!isFormValid || isLoading}
             leftIcon={<Plus className="w-4 h-4" />}
           >
             Create Trip Passport

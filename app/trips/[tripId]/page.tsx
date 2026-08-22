@@ -185,9 +185,9 @@ export default function ItineraryViewPage({
               Dashboard
             </Link>
             <span className="text-border-muted">•</span>
-            <span className="stamp-badge text-[11px]">
+            {/* <span className="stamp-badge text-[11px]">
               SCREEN 6 • ITINERARY PASSPORT
-            </span>
+            </span> */}
           </div>
 
           <div className="flex items-center gap-2">
