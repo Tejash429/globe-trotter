@@ -13,6 +13,7 @@ import {
   Input,
   Textarea,
   Alert,
+  toast,
 } from "@/components/ui";
 import { Plus, Calendar, MapPin, DollarSign, Compass, Search, Loader2 } from "lucide-react";
 
@@ -52,7 +53,6 @@ export function PlanTripModal({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
   // Close dropdown when clicking outside
@@ -173,28 +173,30 @@ export function PlanTripModal({
         throw new Error(errorMsg);
       }
 
-      setSuccess(true);
       const createdTrip = data.data.trip;
+
+      // Trigger Toast notification
+      toast.success(
+        "Trip Passport Created",
+        `Expedition "${createdTrip?.title || formData.title}" has been successfully created!`
+      );
+
+      // Reset form & close modal
+      setFormData({
+        title: "",
+        destinationPlace: "",
+        startDate: "",
+        endDate: "",
+        totalBudget: "",
+        description: "",
+      });
+      onClose();
 
       if (onTripCreated) {
         onTripCreated(createdTrip);
+      } else if (createdTrip?.id) {
+        router.push(`/trips/${createdTrip.id}/builder`);
       }
-
-      setTimeout(() => {
-        setSuccess(false);
-        setFormData({
-          title: "",
-          destinationPlace: "",
-          startDate: "",
-          endDate: "",
-          totalBudget: "",
-          description: "",
-        });
-        onClose();
-        if (createdTrip?.id) {
-          router.push(`/trips/${createdTrip.id}/builder`);
-        }
-      }, 1000);
     } catch (err: any) {
       setError(err.message || "Failed to create trip. Please try again.");
     } finally {
@@ -216,12 +218,6 @@ export function PlanTripModal({
           {error && (
             <Alert variant="danger" badgeText="REQUIRED">
               {error}
-            </Alert>
-          )}
-
-          {success && (
-            <Alert variant="success" badgeText="CREATED">
-              Trip passport created successfully!
             </Alert>
           )}
 
