@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Camera,
   User,
@@ -21,6 +22,7 @@ interface RegisterFormProps {
 }
 
 export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -71,7 +73,10 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     setTimeout(() => {
       setIsLoading(false);
       setSuccess(true);
-    }, 900);
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 700);
+    }, 700);
   };
 
   return (

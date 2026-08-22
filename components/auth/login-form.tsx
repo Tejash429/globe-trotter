@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { User, Lock, Eye, EyeOff, Compass, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button, Input, Card, Badge, Alert } from "@/components/ui";
 
@@ -10,6 +11,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
+  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -35,7 +37,10 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
     setTimeout(() => {
       setIsLoading(false);
       setSuccess(true);
-    }, 800);
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 700);
+    }, 700);
   };
 
   return (
