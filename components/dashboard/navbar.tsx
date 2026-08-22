@@ -71,16 +71,16 @@ export function Navbar({ onOpenPlanModal }: NavbarProps) {
         <nav className="hidden md:flex items-center gap-6 text-sm font-sans font-medium text-ink">
           <Link
             href="/dashboard"
-            className="text-teal-primary font-semibold flex items-center gap-1.5"
+            className="text-muted-foreground hover:text-teal-primary font-medium flex items-center gap-1.5 transition-colors"
           >
             <Map className="w-4 h-4" />
             <span>Dashboard</span>
           </Link>
           <Link
             href="/dashboard"
-            className="text-muted-foreground hover:text-ink transition-colors"
+            className="text-muted-foreground hover:text-teal-primary font-medium flex items-center gap-1.5 transition-colors"
           >
-            My Trips
+            <span>My Trips</span>
           </Link>
         </nav>
 
@@ -126,7 +126,7 @@ export function Navbar({ onOpenPlanModal }: NavbarProps) {
 
             {/* Dropdown Menu */}
             {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-64 rounded-xl bg-surface border border-border-muted shadow-xl py-2 z-50">
+              <div className="absolute right-0 mt-2 w-64 rounded-xl bg-surface border border-border-muted shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 {user ? (
                   <>
                     <div className="px-4 py-2.5 border-b border-border-muted/60">
@@ -145,9 +145,18 @@ export function Navbar({ onOpenPlanModal }: NavbarProps) {
 
                     <div className="py-1">
                       <Link
+                        href="/profile"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-sans text-ink hover:bg-paper transition-colors font-medium"
+                      >
+                        <User className="w-4 h-4 text-teal-primary" />
+                        <span>Traveler Profile & Settings</span>
+                      </Link>
+
+                      <Link
                         href="/dashboard"
                         onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-sans text-ink hover:bg-paper transition-colors"
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-sans text-ink hover:bg-paper transition-colors font-medium"
                       >
                         <Map className="w-4 h-4 text-teal-primary" />
                         <span>My Travel Passport</span>
@@ -158,7 +167,7 @@ export function Navbar({ onOpenPlanModal }: NavbarProps) {
                       <button
                         type="button"
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-sans text-brick-danger hover:bg-brick-danger/10 transition-colors cursor-pointer"
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-sans text-brick-danger hover:bg-brick-danger/10 transition-colors cursor-pointer font-medium"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>Sign Out / Lock Passport</span>
