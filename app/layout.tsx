@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import { ToastContainer } from "@/components/ui";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
@@ -38,6 +39,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col font-sans bg-paper text-ink selection:bg-[#D98E3B]/20 selection:text-[#1B2B34]">
         {children}
+        <ToastContainer />
       </body>
     </html>
   );

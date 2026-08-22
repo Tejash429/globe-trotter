@@ -44,6 +44,8 @@ export function Navbar({ onOpenPlanModal }: NavbarProps) {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    // Clear auth cookie
+    document.cookie = "token=; path=/; max-age=0; SameSite=Lax";
     setUser(null);
     setIsDropdownOpen(false);
     router.push("/login");

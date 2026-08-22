@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Compass, ArrowRight, ShieldCheck } from "lucide-react";
-import { Button, Input, Card, Badge, Alert } from "@/components/ui";
+import { Button, Input, Card, Badge, toast } from "@/components/ui";
 
 interface LoginFormProps {
   onSwitchToRegister?: () => void;
@@ -17,19 +17,16 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
     if (!email.trim()) {
-      setError("Please enter your email address.");
+      toast.error("Email Required", "Please enter your registered email address.");
       return;
     }
     if (!password) {
-      setError("Please enter your password.");
+      toast.error("Password Required", "Please enter your password.");
       return;
     }
 
@@ -51,22 +48,31 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
           data.error?.message ||
           data.error?.details?.[0]?.issue ||
           "Failed to sign in. Please check your credentials.";
-        throw new Error(errorMsg);
+        toast.error("Authentication Failed", errorMsg);
+        return;
       }
 
       if (data.data?.token) {
         localStorage.setItem("token", data.data.token);
+        // Set cookie for middleware route protection
+        document.cookie = `token=${data.data.token}; path=/; max-age=604800; SameSite=Lax`;
         if (data.data.user) {
           localStorage.setItem("user", JSON.stringify(data.data.user));
         }
       }
 
-      setSuccess(true);
+      toast.success(
+        "Passport Verified",
+        `Welcome back${data.data?.user?.name ? `, ${data.data.user.name.split(" ")[0]}` : ""}! Redirecting to Dashboard...`
+      );
+
       setTimeout(() => {
-        router.push("/dashboard");
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectUrl = urlParams.get("redirect") || "/dashboard";
+        router.push(redirectUrl);
       }, 700);
     } catch (err: any) {
-      setError(err.message || "Failed to sign in. Please verify your credentials.");
+      toast.error("Connection Error", err.message || "Failed to contact server. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -84,9 +90,6 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
             Access your personalized travel itineraries
           </p>
         </div>
-        <Badge variant="amber">
-          <span>PORT #01</span>
-        </Badge>
       </div>
 
       {/* Screen 1 Circle Photo / Logo Avatar */}
@@ -108,24 +111,6 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
           Passport Clearance
         </span>
       </div>
-
-      {/* Error Alert */}
-      {error && (
-        <div className="mb-5">
-          <Alert variant="danger" badgeText="ALERT">
-            {error}
-          </Alert>
-        </div>
-      )}
-
-      {/* Success Notification */}
-      {success && (
-        <div className="mb-5">
-          <Alert variant="success" badgeText="PASSPORT VERIFIED">
-            Welcome back, traveler! Redirecting to Dashboard...
-          </Alert>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Email Field */}
@@ -153,7 +138,7 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
               href="#"
               onClick={(e) => {
                 e.preventDefault();
-                alert("Password reset instructions will be sent to your registered email.");
+                toast.info("Password Reset", "Password reset instructions will be sent to your registered email.");
               }}
               className="font-sans text-xs text-teal-primary hover:text-teal-hover hover:underline transition-colors"
             >

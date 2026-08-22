@@ -68,6 +68,56 @@ function getDestinationSuggestions(destinationPlace: string) {
   ];
 }
 
+export const CURATED_TRIP_COVERS: string[] = [
+  "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1200&q=80", // Desert road & mountain vista
+  "https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=1200&q=80", // Rome Colosseum sunset
+  "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80", // Kyoto pagodas & cherry blossoms
+  "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80", // Paris Eiffel Tower twilight
+  "https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?auto=format&fit=crop&w=1200&q=80", // Swiss Alps & turquoise lake
+  "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1200&q=80", // Bali tropical beach temple
+  "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=80", // Dubai skyline golden hour
+  "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=1200&q=80", // Amalfi Coast colorful cliffs
+  "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1200&q=80", // Vintage luggage & map wanderlust
+  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80", // Yosemite valley misty dawn
+  "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=80", // London Big Ben & red bus
+  "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=1200&q=80", // Paris charming cobblestone street
+  "https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=1200&q=80", // Thailand limestone islands
+  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1200&q=80", // Canadian glacial lake canoe
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80", // Tropical turquoise Caribbean beach
+  "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=1200&q=80", // Santorini blue dome & Aegean sea
+];
+
+/**
+ * Select a unique cover image from the curated Unsplash pool that hasn't been used yet by this traveler.
+ */
+async function getUniqueCoverImage(userId: string, requestedCover?: string | null): Promise<string> {
+  if (requestedCover && requestedCover.trim().length > 0) {
+    return requestedCover.trim();
+  }
+
+  // Find all covers already used by this traveler
+  const userTrips = await prisma.trip.findMany({
+    where: { userId },
+    select: { coverImage: true },
+  });
+
+  const usedCovers = new Set(
+    userTrips.map((t) => t.coverImage).filter((img): img is string => Boolean(img))
+  );
+
+  // Pick an image from the pool that hasn't been used yet
+  const availableCovers = CURATED_TRIP_COVERS.filter((img) => !usedCovers.has(img));
+
+  if (availableCovers.length > 0) {
+    const randomIndex = Math.floor(Math.random() * availableCovers.length);
+    return availableCovers[randomIndex];
+  }
+
+  // Fallback: Pick a random image from the pool if all 16 have been used
+  const randomIndex = Math.floor(Math.random() * CURATED_TRIP_COVERS.length);
+  return CURATED_TRIP_COVERS[randomIndex];
+}
+
 export class TripService {
   // 1. Create Trip (Screen 4)
   static async createTrip(userId: string, input: CreateTripInput) {
@@ -83,6 +133,9 @@ export class TripService {
       throw error;
     }
 
+    // Select an unused Unsplash cover image from the curated pool
+    const coverImage = await getUniqueCoverImage(userId, validatedData.coverImage);
+
     const trip = await prisma.trip.create({
       data: {
         userId,
@@ -93,7 +146,7 @@ export class TripService {
         endDate,
         totalBudget: validatedData.totalBudget || 0,
         currency: validatedData.currency || "USD",
-        coverImage: validatedData.coverImage,
+        coverImage,
       },
       include: {
         sections: {
@@ -151,13 +204,20 @@ export class TripService {
         skip,
         take: limit,
         include: {
-          sections: true,
+          sections: {
+            orderBy: { orderIndex: "asc" },
+            include: {
+              activities: {
+                orderBy: { orderIndex: "asc" },
+              },
+            },
+          },
         },
       }),
       prisma.trip.count({ where: whereClause }),
     ]);
 
-    const formattedTrips = trips.map((t) => {
+    const formattedTrips = trips.map((t, idx) => {
       let tripStatus = "upcoming";
       if (t.startDate <= now && t.endDate >= now) {
         tripStatus = "ongoing";
@@ -166,12 +226,22 @@ export class TripService {
       }
 
       const totalSectionBudget = t.sections.reduce((acc, sec) => acc + sec.budget, 0);
+      const activityCount = t.sections.reduce(
+        (acc, sec) => acc + (sec.activities?.length || 0),
+        0
+      );
+
+      const coverImage =
+        t.coverImage ||
+        CURATED_TRIP_COVERS[idx % CURATED_TRIP_COVERS.length];
 
       return {
         ...t,
+        coverImage,
         status: tripStatus,
         sectionsCount: t.sections.length,
         totalSectionBudget,
+        activityCount,
       };
     });
 
@@ -213,6 +283,10 @@ export class TripService {
     const totalSectionBudget = trip.sections.reduce((acc, s) => acc + s.budget, 0);
     const totalExpenses = trip.expenses.reduce((acc, e) => acc + e.amount, 0);
     const totalEstimatedCost = totalSectionBudget + totalExpenses;
+    const activityCount = trip.sections.reduce(
+      (acc, s) => acc + (s.activities?.length || 0),
+      0
+    );
 
     return {
       ...trip,
@@ -221,6 +295,7 @@ export class TripService {
       totalExpenses,
       totalEstimatedCost,
       remainingBudget: trip.totalBudget - totalEstimatedCost,
+      activityCount,
     };
   }
 

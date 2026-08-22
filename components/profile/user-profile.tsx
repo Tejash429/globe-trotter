@@ -20,7 +20,8 @@ import {
   CompassIcon,
 } from "lucide-react";
 import { Navbar } from "@/components/dashboard/navbar";
-import { Badge, Button, Alert, Card } from "@/components/ui";
+import { Badge, Button, Alert, Card, toast } from "@/components/ui";
+import { TripCard } from "@/components/trips/trip-card";
 
 interface TripData {
   id: string;
@@ -34,7 +35,7 @@ interface TripData {
   totalBudget: number;
   currency?: string;
   visibility?: string;
-  status?: "upcoming" | "ongoing" | "completed";
+  status?: "upcoming" | "ongoing" | "completed" | "draft";
   sectionsCount?: number;
   totalSectionBudget?: number;
   totalEstimatedCost?: number;
@@ -62,7 +63,6 @@ export function UserProfile() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [saveSuccess, setSaveSuccess] = useState(false);
   const [userData, setUserData] = useState<UserProfileData | null>(null);
   const [trips, setTrips] = useState<TripData[]>([]);
   const [editForm, setEditForm] = useState<UserProfileData>({
@@ -85,10 +85,16 @@ export function UserProfile() {
   useEffect(() => {
     async function loadProfileAndTrips() {
       setIsLoading(true);
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      let token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+      // Fallback: Read token from cookies if not in localStorage
+      if (!token && typeof document !== "undefined") {
+        const match = document.cookie.match(new RegExp("(^| )token=([^;]+)"));
+        if (match) token = match[2];
+      }
 
       if (!token) {
-        // Fallback: Check local storage for authenticated user
+        // Check local storage for cached user
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
           try {
@@ -124,7 +130,7 @@ export function UserProfile() {
       }
 
       try {
-        // 1. Fetch User Profile
+        // 1. Fetch User Profile from /api/v1/auth/me
         const userRes = await fetch("/api/v1/auth/me", {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -160,19 +166,22 @@ export function UserProfile() {
           setUserData(null);
         }
 
-        // 2. Fetch User Trips
-        const tripsRes = await fetch("/api/v1/trips", {
+        // 2. Fetch User Trips from /api/v1/trips
+        const tripsRes = await fetch("/api/v1/trips?limit=100", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
         const tripsDataRes = await tripsRes.json();
-        const tripList = Array.isArray(tripsDataRes.data)
-          ? tripsDataRes.data
-          : tripsDataRes.data?.trips || [];
-
         if (tripsRes.ok && tripsDataRes.success) {
+          // Parse trips from either data.trips or data
+          const tripList: TripData[] = Array.isArray(tripsDataRes.data?.trips)
+            ? tripsDataRes.data.trips
+            : Array.isArray(tripsDataRes.data)
+            ? tripsDataRes.data
+            : [];
+
           setTrips(tripList);
           setUserData((prev) => (prev ? { ...prev, tripsCount: tripList.length } : null));
         } else {
@@ -216,22 +225,22 @@ export function UserProfile() {
     }
 
     setIsEditing(false);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    toast.success("Profile Updated", "Your traveler credentials and preferences have been saved.");
   };
 
   // Segregate trips into upcoming and completed based on dates or status
   const now = new Date();
   const upcomingTrips = trips.filter((t) => {
-    if (t.status === "upcoming" || t.status === "ongoing") return true;
+    if (t.status === "upcoming" || t.status === "ongoing" || t.status === "draft") return true;
     if (t.status === "completed") return false;
+    if (!t.endDate) return true;
     return new Date(t.endDate) >= now;
   });
 
   const previousTrips = trips.filter((t) => {
     if (t.status === "completed") return true;
-    if (t.status === "upcoming" || t.status === "ongoing") return false;
-    return new Date(t.endDate) < now;
+    if (t.status === "upcoming" || t.status === "ongoing" || t.status === "draft") return false;
+    return t.endDate ? new Date(t.endDate) < now : false;
   });
 
   return (
@@ -276,13 +285,6 @@ export function UserProfile() {
         {/* Authenticated Profile Content */}
         {!isLoading && userData && (
           <>
-            {/* Success Alert */}
-            {saveSuccess && (
-              <Alert variant="success" badgeText="PROFILE UPDATED">
-                Your traveler credentials and preferences have been successfully updated.
-              </Alert>
-            )}
-
             {/* Top Section: User Profile Card */}
             <section className="w-full bg-surface border border-border-muted rounded-2xl p-6 sm:p-8 shadow-[0_4px_20px_rgba(27,43,52,0.04)] relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-primary via-amber-accent to-teal-primary" />
@@ -528,16 +530,16 @@ export function UserProfile() {
               </div>
             </section>
 
-            {/* Section 2: Preplanned Trips (Dynamic from /api/v1/trips) */}
+            {/* Section 2: Preplanned Trips (Unified TripCard) */}
             <section className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-dashed border-border-muted pb-3">
-                <div>
+                <div className="flex items-center gap-3">
                   <h2 className="text-2xl font-extrabold font-display text-ink tracking-tight">
                     Preplanned Trips
                   </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Upcoming scheduled multi-city itineraries
-                  </p>
+                  <span className="stamp-badge hidden sm:inline-flex text-[10px]">
+                    UPCOMING EXPEDITIONS
+                  </span>
                 </div>
                 <Badge variant="teal">
                   {upcomingTrips.length} UPCOMING EXPEDITIONS
@@ -547,7 +549,11 @@ export function UserProfile() {
               {upcomingTrips.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {upcomingTrips.map((trip) => (
-                    <LiveTripCard key={trip.id} trip={trip} />
+                    <TripCard
+                      key={trip.id}
+                      trip={trip}
+                      viewHref={`/trips/${trip.id}/builder`}
+                    />
                   ))}
                 </div>
               ) : (
@@ -558,16 +564,16 @@ export function UserProfile() {
               )}
             </section>
 
-            {/* Section 3: Previous Trips (Dynamic from /api/v1/trips) */}
+            {/* Section 3: Previous Trips (Unified TripCard) */}
             <section className="space-y-4 pt-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-dashed border-border-muted pb-3">
-                <div>
+                <div className="flex items-center gap-3">
                   <h2 className="text-2xl font-extrabold font-display text-ink tracking-tight">
                     Previous Trips
                   </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Completed travel logs &amp; archived itineraries
-                  </p>
+                  <span className="stamp-badge hidden sm:inline-flex text-[10px]">
+                    ARCHIVED ITINERARIES
+                  </span>
                 </div>
                 <Badge variant="amber">
                   {previousTrips.length} COMPLETED EXPEDITIONS
@@ -577,7 +583,11 @@ export function UserProfile() {
               {previousTrips.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {previousTrips.map((trip) => (
-                    <LiveTripCard key={trip.id} trip={trip} />
+                    <TripCard
+                      key={trip.id}
+                      trip={trip}
+                      viewHref={`/trips/${trip.id}`}
+                    />
                   ))}
                 </div>
               ) : (
@@ -591,121 +601,6 @@ export function UserProfile() {
           </>
         )}
       </main>
-    </div>
-  );
-}
-
-/**
- * Dynamic Trip Card Component built from live backend trip data
- */
-function LiveTripCard({ trip }: { trip: TripData }) {
-  const startDateStr = trip.startDate
-    ? new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
-    : "";
-  const endDateStr = trip.endDate
-    ? new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
-    : "";
-  const dateRange = startDateStr && endDateStr ? `${startDateStr.toUpperCase()} – ${endDateStr.toUpperCase()}` : startDateStr;
-
-  const totalDays = trip.startDate && trip.endDate
-    ? Math.max(1, Math.round((new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / (1000 * 60 * 60 * 24)))
-    : 1;
-
-  const totalBudget = trip.totalBudget || 0;
-  const spentBudget = trip.totalSectionBudget || trip.totalEstimatedCost || 0;
-  const budgetPercentage = totalBudget > 0 ? Math.min(Math.round((spentBudget / totalBudget) * 100), 100) : 0;
-  const isCompleted = trip.status === "completed" || new Date(trip.endDate) < new Date();
-
-  const coverUrl =
-    trip.coverImage ||
-    "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&auto=format&fit=crop&q=80";
-
-  return (
-    <div className="bg-surface border border-border-muted rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(27,43,52,0.04)] hover:shadow-md transition-all duration-300 flex flex-col group">
-      {/* Cover Image Header */}
-      <div className="relative h-48 w-full overflow-hidden bg-slate-900">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={coverUrl}
-          alt={trip.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-slate-950/40" />
-
-        {/* Top Badges */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-          <span className="px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md text-white font-mono text-[11px] font-bold tracking-wider border border-white/10 shadow-xs">
-            {trip.destinationPlace?.toUpperCase() || "EXPEDITION"}
-          </span>
-          <span
-            className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-semibold flex items-center gap-1 border shadow-xs ${
-              !isCompleted
-                ? "bg-teal-primary/90 text-white border-teal-primary"
-                : "bg-amber-accent/90 text-white border-amber-accent"
-            }`}
-          >
-            <Clock className="w-3 h-3" />
-            <span>{!isCompleted ? "UPCOMING" : "COMPLETED"}</span>
-          </span>
-        </div>
-
-        {/* Bottom Date Overlay */}
-        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white font-mono text-xs font-semibold drop-shadow-md">
-          <Calendar className="w-3.5 h-3.5 text-amber-accent" />
-          <span>{dateRange}</span>
-        </div>
-      </div>
-
-      {/* Body Content */}
-      <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-        <div>
-          <h3 className="font-display text-lg font-bold text-ink group-hover:text-teal-primary transition-colors">
-            {trip.title}
-          </h3>
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-            {trip.description || `Journey to ${trip.destinationPlace} spanning ${totalDays} days.`}
-          </p>
-
-          {/* Destination tag */}
-          <div className="mt-3 p-2.5 rounded-xl bg-paper border border-border-muted/70 flex items-center justify-between">
-            <span className="text-[11px] font-mono text-ink flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-teal-primary" />
-              <span className="font-semibold">{trip.destinationPlace}</span>
-            </span>
-            <span className="text-[10px] font-mono text-muted-foreground">
-              {trip.sectionsCount ?? (trip.sections?.length || 0)} Sections
-            </span>
-          </div>
-        </div>
-
-        {/* Budget Progress Bar */}
-        <div className="space-y-1.5 border-t border-dashed border-border-muted pt-3">
-          <div className="flex justify-between text-xs font-mono">
-            <span className="text-muted-foreground">Allocated Budget:</span>
-            <span className="font-bold text-ink">
-              ${spentBudget.toLocaleString()} / ${totalBudget.toLocaleString()} {trip.currency || "USD"}
-            </span>
-          </div>
-          <div className="w-full h-1.5 bg-paper rounded-full overflow-hidden border border-border-muted/50">
-            <div
-              className="h-full bg-teal-primary rounded-full transition-all duration-500"
-              style={{ width: `${budgetPercentage}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-1">
-          <span className="text-xs font-mono text-muted-foreground">
-            {totalDays} {totalDays === 1 ? "Day" : "Days"} Duration
-          </span>
-          <Link href={`/trips/${trip.id}/builder`}>
-            <Button variant="outline" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-              Open Builder
-            </Button>
-          </Link>
-        </div>
-      </div>
     </div>
   );
 }
