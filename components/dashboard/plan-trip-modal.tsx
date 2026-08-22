@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogHeader,
@@ -11,10 +12,9 @@ import {
   Button,
   Input,
   Textarea,
-  Select,
   Alert,
 } from "@/components/ui";
-import { Plus, Calendar, MapPin, DollarSign, Compass, CheckCircle2 } from "lucide-react";
+import { Plus, Calendar, MapPin, DollarSign, Compass } from "lucide-react";
 
 interface PlanTripModalProps {
   isOpen: boolean;
@@ -27,13 +27,13 @@ export function PlanTripModal({
   onClose,
   onTripCreated,
 }: PlanTripModalProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     title: "",
+    destinationPlace: "",
     startDate: "",
     endDate: "",
-    startingCity: "",
-    budget: "",
-    travelStyle: "moderate",
+    totalBudget: "",
     description: "",
   });
 
@@ -42,13 +42,13 @@ export function PlanTripModal({
   const [error, setError] = useState("");
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -56,23 +56,78 @@ export function PlanTripModal({
       setError("Please provide a title for your trip.");
       return;
     }
+    if (!formData.destinationPlace.trim()) {
+      setError("Please specify a destination place or city.");
+      return;
+    }
     if (!formData.startDate || !formData.endDate) {
       setError("Please specify both start and end travel dates.");
       return;
     }
 
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      setError("You must be signed in to create a trip. Please log in first.");
+      return;
+    }
+
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setSuccess(true);
-      if (onTripCreated) {
-        onTripCreated(formData);
+
+    try {
+      const res = await fetch("/api/v1/trips", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: formData.title.trim(),
+          destinationPlace: formData.destinationPlace.trim(),
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          totalBudget: formData.totalBudget ? parseFloat(formData.totalBudget) : 0,
+          description: formData.description.trim() || undefined,
+          currency: "USD",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        const errorMsg =
+          data.error?.message ||
+          data.error?.details?.[0]?.issue ||
+          "Failed to create trip. Please check your inputs.";
+        throw new Error(errorMsg);
       }
+
+      setSuccess(true);
+      const createdTrip = data.data.trip;
+
+      if (onTripCreated) {
+        onTripCreated(createdTrip);
+      }
+
       setTimeout(() => {
         setSuccess(false);
+        setFormData({
+          title: "",
+          destinationPlace: "",
+          startDate: "",
+          endDate: "",
+          totalBudget: "",
+          description: "",
+        });
         onClose();
-      }, 1200);
-    }, 800);
+        if (createdTrip?.id) {
+          router.push(`/trips/${createdTrip.id}/builder`);
+        }
+      }, 1000);
+    } catch (err: any) {
+      setError(err.message || "Failed to create trip. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -94,7 +149,7 @@ export function PlanTripModal({
 
           {success && (
             <Alert variant="success" badgeText="CREATED">
-              Trip passport opened! Launching Itinerary Builder...
+              Trip passport created successfully!
             </Alert>
           )}
 
@@ -107,6 +162,7 @@ export function PlanTripModal({
             onChange={handleChange}
             placeholder="e.g. Nordic Winter Expedition 2026"
             leftIcon={<Compass className="w-4 h-4 text-teal-primary/70" />}
+            required
           />
 
           {/* Dates */}
@@ -119,6 +175,7 @@ export function PlanTripModal({
               value={formData.startDate}
               onChange={handleChange}
               leftIcon={<Calendar className="w-4 h-4 text-amber-accent/70" />}
+              required
             />
             <Input
               id="endDate"
@@ -128,44 +185,33 @@ export function PlanTripModal({
               value={formData.endDate}
               onChange={handleChange}
               leftIcon={<Calendar className="w-4 h-4 text-amber-accent/70" />}
+              required
             />
           </div>
 
-          {/* Starting City & Budget Target */}
+          {/* Destination Place & Budget Target */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
-              id="startingCity"
-              name="startingCity"
-              label="Starting City"
-              value={formData.startingCity}
+              id="destinationPlace"
+              name="destinationPlace"
+              label="Destination Place / City"
+              value={formData.destinationPlace}
               onChange={handleChange}
-              placeholder="e.g. London / Oslo"
+              placeholder="e.g. Paris / Jaipur"
               leftIcon={<MapPin className="w-4 h-4 text-teal-primary/70" />}
+              required
             />
             <Input
-              id="budget"
-              name="budget"
+              id="totalBudget"
+              name="totalBudget"
               type="number"
               label="Target Budget ($USD)"
-              value={formData.budget}
+              value={formData.totalBudget}
               onChange={handleChange}
               placeholder="e.g. 2500"
               leftIcon={<DollarSign className="w-4 h-4 text-teal-primary/70" />}
             />
           </div>
-
-          {/* Travel Style */}
-          <Select
-            id="travelStyle"
-            name="travelStyle"
-            label="Travel Pace & Style"
-            value={formData.travelStyle}
-            onChange={handleChange}
-          >
-            <option value="budget">Backpacker / Budget ($)</option>
-            <option value="moderate">Balanced / Moderate ($$)</option>
-            <option value="luxury">Comfort / Luxury ($$$)</option>
-          </Select>
 
           {/* Description */}
           <Textarea
@@ -203,3 +249,4 @@ export function PlanTripModal({
     </Dialog>
   );
 }
+
