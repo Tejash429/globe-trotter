@@ -42,9 +42,23 @@ export const reorderSectionsSchema = z.object({
   ).min(1, "Section orders array required"),
 });
 
+export const createActivitySchema = z.object({
+  title: z.string().min(1, "Activity title is required"),
+  category: z.string().optional().default("SIGHTSEEING"),
+  description: z.string().optional(),
+  cost: z.number().min(0, "Cost cannot be negative").optional().default(0),
+  time: z.string().optional(),
+  openTripMapXid: z.string().optional(),
+  orderIndex: z.number().int().optional().default(1),
+});
+
+export const updateActivitySchema = createActivitySchema.partial();
+
 export type CreateTripInput = z.infer<typeof createTripSchema>;
 export type UpdateTripInput = z.infer<typeof updateTripSchema>;
 export type CreateSectionInput = z.infer<typeof createSectionSchema>;
 export type CreateBatchSectionsInput = z.infer<typeof createBatchSectionsSchema>;
 export type UpdateSectionInput = z.infer<typeof updateSectionSchema>;
 export type ReorderSectionsInput = z.infer<typeof reorderSectionsSchema>;
+export type CreateActivityInput = z.infer<typeof createActivitySchema>;
+export type UpdateActivityInput = z.infer<typeof updateActivitySchema>;

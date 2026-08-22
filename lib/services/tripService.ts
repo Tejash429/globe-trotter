@@ -193,6 +193,11 @@ export class TripService {
       include: {
         sections: {
           orderBy: { orderIndex: "asc" },
+          include: {
+            activities: {
+              orderBy: { orderIndex: "asc" },
+            },
+          },
         },
         expenses: true,
       },
@@ -348,6 +353,11 @@ export class TripService {
       include: {
         sections: {
           orderBy: { orderIndex: "asc" },
+          include: {
+            activities: {
+              orderBy: { orderIndex: "asc" },
+            },
+          },
         },
       },
     });
@@ -470,8 +480,160 @@ export class TripService {
     const reorderedSections = await prisma.itinerarySection.findMany({
       where: { tripId },
       orderBy: { orderIndex: "asc" },
+      include: {
+        activities: {
+          orderBy: { orderIndex: "asc" },
+        },
+      },
     });
 
     return reorderedSections;
+  }
+
+  // -------------------------------------------------------------
+  // SECTION ACTIVITIES MODULE
+  // -------------------------------------------------------------
+
+  // 12. Add Activity to Section Stop
+  static async addActivity(tripId: string, sectionId: string, userId: string, input: any) {
+    const trip = await prisma.trip.findFirst({
+      where: { id: tripId, userId },
+    });
+
+    if (!trip) {
+      const error: any = new Error("Trip not found");
+      error.statusCode = 404;
+      error.code = "NOT_FOUND";
+      throw error;
+    }
+
+    const section = await prisma.itinerarySection.findFirst({
+      where: { id: sectionId, tripId },
+    });
+
+    if (!section) {
+      const error: any = new Error("Itinerary section stop not found");
+      error.statusCode = 404;
+      error.code = "NOT_FOUND";
+      throw error;
+    }
+
+    const activity = await prisma.sectionActivity.create({
+      data: {
+        sectionId,
+        title: input.title,
+        category: input.category || "SIGHTSEEING",
+        description: input.description,
+        cost: input.cost || 0,
+        time: input.time,
+        openTripMapXid: input.openTripMapXid,
+        orderIndex: input.orderIndex || 1,
+      },
+    });
+
+    return activity;
+  }
+
+  // 13. Get Section with Activities
+  static async getSectionWithActivities(tripId: string, sectionId: string, userId: string) {
+    const trip = await prisma.trip.findFirst({
+      where: { id: tripId, userId },
+    });
+
+    if (!trip) {
+      const error: any = new Error("Trip not found");
+      error.statusCode = 404;
+      error.code = "NOT_FOUND";
+      throw error;
+    }
+
+    const section = await prisma.itinerarySection.findFirst({
+      where: { id: sectionId, tripId },
+      include: {
+        activities: {
+          orderBy: { orderIndex: "asc" },
+        },
+      },
+    });
+
+    if (!section) {
+      const error: any = new Error("Itinerary section stop not found");
+      error.statusCode = 404;
+      error.code = "NOT_FOUND";
+      throw error;
+    }
+
+    const totalActivityCost = section.activities.reduce((acc, act) => acc + act.cost, 0);
+
+    return {
+      ...section,
+      tripTitle: trip.title,
+      destinationPlace: trip.destinationPlace,
+      totalActivityCost,
+      remainingSectionBudget: section.budget - totalActivityCost,
+    };
+  }
+
+  // 14. Update Activity
+  static async updateActivity(tripId: string, sectionId: string, activityId: string, userId: string, input: any) {
+    const trip = await prisma.trip.findFirst({
+      where: { id: tripId, userId },
+    });
+
+    if (!trip) {
+      const error: any = new Error("Trip not found");
+      error.statusCode = 404;
+      error.code = "NOT_FOUND";
+      throw error;
+    }
+
+    const activity = await prisma.sectionActivity.findFirst({
+      where: { id: activityId, sectionId },
+    });
+
+    if (!activity) {
+      const error: any = new Error("Section activity not found");
+      error.statusCode = 404;
+      error.code = "NOT_FOUND";
+      throw error;
+    }
+
+    const updatedActivity = await prisma.sectionActivity.update({
+      where: { id: activityId },
+      data: input,
+    });
+
+    return updatedActivity;
+  }
+
+  // 15. Delete Activity
+  static async deleteActivity(tripId: string, sectionId: string, activityId: string, userId: string) {
+    const trip = await prisma.trip.findFirst({
+      where: { id: tripId, userId },
+    });
+
+    if (!trip) {
+      const error: any = new Error("Trip not found");
+      error.statusCode = 404;
+      error.code = "NOT_FOUND";
+      throw error;
+    }
+
+    const activity = await prisma.sectionActivity.findFirst({
+      where: { id: activityId, sectionId },
+    });
+
+    if (!activity) {
+      const error: any = new Error("Section activity not found");
+      error.statusCode = 404;
+      error.code = "NOT_FOUND";
+      throw error;
+    }
+
+    await prisma.sectionActivity.delete({
+      where: { id: activityId },
+    });
+
+    return { message: "Section activity deleted successfully" };
   }
 }
