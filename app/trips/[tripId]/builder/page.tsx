@@ -24,6 +24,7 @@ import {
   AlertCircle,
   Clock,
   Layers,
+  ArrowRight,
 } from "lucide-react";
 import { Navbar } from "@/components/dashboard/navbar";
 import { Button, Card, Badge, Alert } from "@/components/ui";
@@ -40,6 +41,13 @@ interface TripDetails {
   description?: string;
 }
 
+interface SectionActivity {
+  id: string;
+  title: string;
+  category: string;
+  cost: number;
+}
+
 interface ItinerarySection {
   id: string;
   tripId: string;
@@ -50,14 +58,7 @@ interface ItinerarySection {
   endDate: string;
   budget: number;
   orderIndex: number;
-}
-
-interface Suggestion {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  estimatedCost: number;
+  activities?: SectionActivity[];
 }
 
 export default function ItineraryBuilderPage({
@@ -70,7 +71,6 @@ export default function ItineraryBuilderPage({
 
   const [trip, setTrip] = useState<TripDetails | null>(null);
   const [sections, setSections] = useState<ItinerarySection[]>([]);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -114,39 +114,6 @@ export default function ItineraryBuilderPage({
       if (sectionsRes.ok && sectionsData.success) {
         setSections(sectionsData.data.sections || []);
       }
-
-      // Generate initial suggestions based on destination
-      const dest = tripData.data?.destinationPlace || "Destination";
-      setSuggestions([
-        {
-          id: "sug_1",
-          title: `Flight / Transit to ${dest}`,
-          category: "TRAVEL",
-          description: `Direct transport tickets and baggage options to ${dest}.`,
-          estimatedCost: 350,
-        },
-        {
-          id: "sug_2",
-          title: `Central ${dest} Hotel Stay`,
-          category: "ACCOMMODATION",
-          description: `Boutique hotel accommodation in the city center of ${dest}.`,
-          estimatedCost: 650,
-        },
-        {
-          id: "sug_3",
-          title: `${dest} Highlights Walking Tour`,
-          category: "ACTIVITY",
-          description: `Explore iconic historic sights and landmarks with a local guide.`,
-          estimatedCost: 45,
-        },
-        {
-          id: "sug_4",
-          title: `Local Food & Culinary Tasting`,
-          category: "ACTIVITY",
-          description: `Sample regional specialties, local street food, and wines in ${dest}.`,
-          estimatedCost: 75,
-        },
-      ]);
     } catch (err: any) {
       setError(err.message || "Failed to load trip itinerary");
     } finally {
@@ -161,13 +128,14 @@ export default function ItineraryBuilderPage({
 
   // Section Save Callback
   const handleSectionSaved = () => {
-    setActionSuccess("Itinerary updated successfully!");
+    setActionSuccess("Itinerary stop updated successfully!");
     fetchData();
     setTimeout(() => setActionSuccess(""), 3000);
   };
 
   // Delete Section
-  const handleDeleteSection = async (sectionId: string) => {
+  const handleDeleteSection = async (e: React.MouseEvent, sectionId: string) => {
+    e.stopPropagation();
     if (!confirm("Are you sure you want to delete this itinerary stop?")) return;
 
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -184,7 +152,7 @@ export default function ItineraryBuilderPage({
         throw new Error(data.error?.message || "Failed to delete section");
       }
 
-      setActionSuccess("Section removed from itinerary.");
+      setActionSuccess("Stop removed from itinerary.");
       fetchData();
       setTimeout(() => setActionSuccess(""), 3000);
     } catch (err: any) {
@@ -193,7 +161,8 @@ export default function ItineraryBuilderPage({
   };
 
   // Reorder Sections (Move Up / Down)
-  const handleMoveSection = async (index: number, direction: "up" | "down") => {
+  const handleMoveSection = async (e: React.MouseEvent, index: number, direction: "up" | "down") => {
+    e.stopPropagation();
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= sections.length) return;
 
@@ -314,7 +283,7 @@ export default function ItineraryBuilderPage({
               }}
               leftIcon={<Plus className="w-4 h-4" />}
             >
-              Add Stop
+              Create New Stop (Section)
             </Button>
           </div>
         </div>
@@ -415,62 +384,17 @@ export default function ItineraryBuilderPage({
               </div>
             </Card>
 
-            {/* Quick Suggestions Bar */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-accent" />
-                <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-ink">
-                  Suggested Waypoint Templates for {trip.destinationPlace}:
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {suggestions.map((sug) => (
-                  <button
-                    key={sug.id}
-                    onClick={() => {
-                      setEditingSection({
-                        title: sug.title,
-                        type: (sug.category as any) || "ACTIVITY",
-                        startDate: trip.startDate ? trip.startDate.split("T")[0] : "",
-                        endDate: trip.endDate ? trip.endDate.split("T")[0] : "",
-                        budget: sug.estimatedCost,
-                        description: sug.description,
-                      });
-                      setIsModalOpen(true);
-                    }}
-                    className="p-3 rounded-lg bg-surface border border-border-muted hover:border-teal-primary/60 hover:shadow-xs transition-all text-left group cursor-pointer space-y-1"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] font-semibold text-teal-primary uppercase">
-                        + Quick Add
-                      </span>
-                      <span className="font-mono text-xs font-bold text-ink">
-                        ${sug.estimatedCost}
-                      </span>
-                    </div>
-                    <p className="font-sans text-xs font-bold text-ink group-hover:text-teal-primary transition-colors line-clamp-1">
-                      {sug.title}
-                    </p>
-                    <p className="font-sans text-[11px] text-muted-foreground line-clamp-1">
-                      {sug.description}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Section Stops Timeline Container */}
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between route-divider pb-2">
                 <div className="flex items-center gap-2">
                   <Layers className="w-4 h-4 text-teal-primary" />
                   <h2 className="font-display text-xl font-bold text-ink">
-                    Itinerary Stops & Waypoints ({sections.length})
+                    Itinerary Stops ({sections.length})
                   </h2>
                 </div>
                 <span className="font-mono text-xs text-muted-foreground uppercase">
-                  Reorder with arrows
+                  Click any stop to add & manage activities
                 </span>
               </div>
 
@@ -485,7 +409,7 @@ export default function ItineraryBuilderPage({
                       No Stops Added Yet
                     </h3>
                     <p className="font-sans text-xs text-muted-foreground max-w-sm mx-auto mt-1">
-                      Begin building your day-by-day itinerary by adding travel legs, hotel stays, or sightseeing activities!
+                      Begin building your day-by-day itinerary by adding travel legs, hotel stays, or sightseeing stops!
                     </p>
                   </div>
                   <Button
@@ -501,86 +425,126 @@ export default function ItineraryBuilderPage({
                   </Button>
                 </div>
               ) : (
-                /* Sections List */
-                <div className="space-y-3">
-                  {sections.map((section, idx) => (
-                    <Card
-                      key={section.id}
-                      isTicketStub
-                      className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-border-muted hover:shadow-xs transition-shadow"
-                    >
-                      <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                        {/* Waypoint Number Badge */}
-                        <div className="w-8 h-8 rounded-full bg-paper border border-border-muted text-teal-primary font-mono text-xs font-bold flex items-center justify-center shrink-0">
-                          #{idx + 1}
-                        </div>
+                /* Sections Brief Summary Cards List */
+                <div className="space-y-4">
+                  {sections.map((section, idx) => {
+                    const activityCount = section.activities?.length || 0;
+                    const totalActivityCost = (section.activities || []).reduce((acc, a) => acc + (a.cost || 0), 0);
 
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {getTypeBadge(section.type)}
-                            <h4 className="font-display text-base font-bold text-ink leading-tight truncate">
-                              {section.title}
-                            </h4>
+                    return (
+                      <Card
+                        key={section.id}
+                        isTicketStub
+                        onClick={() => router.push(`/trips/${tripId}/sections/${section.id}`)}
+                        className="p-5 flex flex-col space-y-3.5 border-border-muted hover:border-teal-primary/60 hover:shadow-md transition-all cursor-pointer group"
+                      >
+                        {/* Top Brief Header */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-paper border border-border-muted text-teal-primary font-mono text-xs font-bold flex items-center justify-center shrink-0">
+                              #{idx + 1}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {getTypeBadge(section.type)}
+                                <h3 className="font-display text-lg font-bold text-ink group-hover:text-teal-primary transition-colors leading-tight">
+                                  {section.title}
+                                </h3>
+                              </div>
+                              <p className="font-mono text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+                                <span>{formatDate(section.startDate)} – {formatDate(section.endDate)}</span>
+                              </p>
+                            </div>
                           </div>
 
-                          {section.description && (
-                            <p className="font-sans text-xs text-muted-foreground line-clamp-2">
-                              {section.description}
-                            </p>
+                          <div className="flex items-center gap-2 self-end sm:self-center">
+                            {/* Action Controls */}
+                            <div className="flex items-center gap-1 bg-paper p-1 rounded-lg border border-border-muted">
+                              <button
+                                onClick={(e) => handleMoveSection(e, idx, "up")}
+                                disabled={idx === 0}
+                                className="p-1.5 rounded hover:bg-surface text-ink disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                                title="Move up"
+                              >
+                                <ChevronUp className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => handleMoveSection(e, idx, "down")}
+                                disabled={idx === sections.length - 1}
+                                className="p-1.5 rounded hover:bg-surface text-ink disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                                title="Move down"
+                              >
+                                <ChevronDown className="w-4 h-4" />
+                              </button>
+                              <div className="w-px h-4 bg-border-muted mx-0.5" />
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingSection(section);
+                                  setIsModalOpen(true);
+                                }}
+                                className="p-1.5 rounded hover:bg-surface text-teal-primary transition-colors cursor-pointer"
+                                title="Edit stop details"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => handleDeleteSection(e, section.id)}
+                                className="p-1.5 rounded hover:bg-surface text-brick-danger transition-colors cursor-pointer"
+                                title="Delete stop"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                              className="group-hover:bg-teal-primary group-hover:text-white transition-colors"
+                            >
+                              Add & Manage Activities
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Brief Summary Body */}
+                        <div className="p-3.5 rounded-lg bg-paper/80 border border-border-muted/80 space-y-2 font-mono text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <Ticket className="w-3.5 h-3.5 text-teal-primary" />
+                              <span className="font-bold text-ink">
+                                {activityCount === 0 ? "No activities added yet" : `${activityCount} Activities Planned`}
+                              </span>
+                            </span>
+
+                            <span className="font-bold text-teal-primary">
+                              ${totalActivityCost.toLocaleString()} spent / ${section.budget.toLocaleString()} allocated
+                            </span>
+                          </div>
+
+                          {/* Mini Activities Preview Chips */}
+                          {section.activities && section.activities.length > 0 && (
+                            <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-border-muted/50">
+                              {section.activities.map((act) => (
+                                <span
+                                  key={act.id}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface border border-border-muted text-ink font-sans text-xs font-semibold"
+                                >
+                                  <span>• {act.title}</span>
+                                  {act.cost > 0 && (
+                                    <span className="text-teal-primary font-mono text-[10px]">
+                                      (${act.cost})
+                                    </span>
+                                  )}
+                                </span>
+                              ))}
+                            </div>
                           )}
-
-                          <div className="flex items-center gap-4 font-mono text-xs text-muted-foreground pt-1 flex-wrap">
-                            <span className="flex items-center gap-1 text-ink">
-                              <Calendar className="w-3.5 h-3.5 text-amber-accent" />
-                              {formatDate(section.startDate)} – {formatDate(section.endDate)}
-                            </span>
-                            <span className="flex items-center gap-1 font-bold text-teal-primary">
-                              <DollarSign className="w-3.5 h-3.5" />
-                              ${(section.budget || 0).toLocaleString()} allocated
-                            </span>
-                          </div>
                         </div>
-                      </div>
-
-                      {/* Action Controls */}
-                      <div className="flex items-center gap-1 shrink-0 self-end sm:self-center bg-paper p-1 rounded-lg border border-border-muted">
-                        <button
-                          onClick={() => handleMoveSection(idx, "up")}
-                          disabled={idx === 0}
-                          className="p-1.5 rounded hover:bg-surface text-ink disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
-                          title="Move up"
-                        >
-                          <ChevronUp className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleMoveSection(idx, "down")}
-                          disabled={idx === sections.length - 1}
-                          className="p-1.5 rounded hover:bg-surface text-ink disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
-                          title="Move down"
-                        >
-                          <ChevronDown className="w-4 h-4" />
-                        </button>
-                        <div className="w-px h-4 bg-border-muted mx-0.5" />
-                        <button
-                          onClick={() => {
-                            setEditingSection(section);
-                            setIsModalOpen(true);
-                          }}
-                          className="p-1.5 rounded hover:bg-surface text-teal-primary transition-colors cursor-pointer"
-                          title="Edit stop"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSection(section.id)}
-                          className="p-1.5 rounded hover:bg-surface text-brick-danger transition-colors cursor-pointer"
-                          title="Delete stop"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </div>

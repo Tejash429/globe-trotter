@@ -79,18 +79,34 @@ model Trip {
 }
 
 model ItinerarySection {
-  id          String      @id @default(uuid())
+  id          String            @id @default(uuid())
   tripId      String
-  trip        Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip        Trip              @relation(fields: [tripId], references: [id], onDelete: Cascade)
   title       String
-  type        SectionType @default(ACTIVITY)
+  type        SectionType       @default(ACTIVITY)
   description String?
   startDate   DateTime
   endDate     DateTime
-  budget      Float       @default(0)
-  orderIndex  Int         @default(1)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  budget      Float             @default(0)
+  orderIndex  Int               @default(1)
+  activities  SectionActivity[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model SectionActivity {
+  id             String           @id @default(uuid())
+  sectionId      String
+  section        ItinerarySection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  title          String
+  category       String           @default("SIGHTSEEING")
+  description    String?
+  cost           Float            @default(0)
+  time           String?
+  openTripMapXid String?
+  orderIndex     Int              @default(1)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
 
 model City {
