@@ -198,20 +198,32 @@ Creates a new user account.
 * **Request Body:**
   ```json
   {
-    "name": "Jane Doe",
+    "firstName": "Jane",
+    "lastName": "Doe",
     "email": "jane@example.com",
-    "password": "Password123!"
+    "password": "Password123!",
+    "phoneNumber": "+1234567890",
+    "country": "United States",
+    "city": "New York",
+    "additionalInfo": "Avid hiker and food enthusiast"
   }
   ```
 * **Response `201 Created`:**
   ```json
   {
     "success": true,
+    "message": "User registered successfully",
     "data": {
       "user": {
         "id": "usr_123",
         "name": "Jane Doe",
+        "firstName": "Jane",
+        "lastName": "Doe",
         "email": "jane@example.com",
+        "phoneNumber": "+1234567890",
+        "country": "United States",
+        "city": "New York",
+        "additionalInfo": "Avid hiker and food enthusiast",
         "avatarUrl": null,
         "language": "en"
       },

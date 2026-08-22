@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Visibility {
+  PRIVATE
+  PUBLIC
+}
+
+enum CostIndex {
+  BUDGET
+  MODERATE
+  LUXURY
+}
+
+enum ExpenseCategory {
+  ACCOMMODATION
+  TRANSPORT
+  ACTIVITIES
+  MEALS
+  MISCELLANEOUS
+}
+
+enum SectionType {
+  TRAVEL
+  ACCOMMODATION
+  ACTIVITY
+  MISCELLANEOUS
+}
+
+model User {
+  id                String             @id @default(uuid())
+  email             String             @unique
+  username          String?            @unique
+  passwordHash      String
+  name              String
+  firstName         String?
+  lastName          String?
+  phoneNumber       String?
+  city              String?
+  country           String?
+  additionalInfo    String?
+  avatarUrl         String?
+  language          String             @default("en")
+  role              Role               @default(USER)
+  trips             Trip[]
+  savedDestinations SavedDestination[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+model Trip {
+  id               String       @id @default(uuid())
+  userId           String
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  description      String?
+  coverImage       String?
+  startDate        DateTime
+  endDate          DateTime
+  totalBudget      Float        @default(0)
+  currency         String       @default("USD")
+  visibility       Visibility   @default(PRIVATE)
+  shareToken       String?      @unique @default(uuid())
+  stops            Stop[]
+  expenses         Expense[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model City {
+  id                String             @id @default(uuid())
+  name              String
+  country           String
+  region            String
+  description       String
+  imageUrl          String
+  costIndex         CostIndex          @default(MODERATE)
+  averageDailyCost  Float
+  popularityScore   Int                @default(50)
+  stops             Stop[]
+  catalogActivities CatalogActivity[]
+  savedBy           SavedDestination[]
+}
+
+model Stop {
+  id            String         @id @default(uuid())
+  tripId        String
+  trip          Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  cityId        String
+  city          City           @relation(fields: [cityId], references: [id])
+  title         String?
+  sectionType   SectionType    @default(ACTIVITY)
+  arrivalDate   DateTime
+  departureDate DateTime
+  budget        Float          @default(0)
+  notes         String?
+  orderIndex    Int
+  activities    TripActivity[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model CatalogActivity {
+  id              String         @id @default(uuid())
+  cityId          String
+  city            City           @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  title           String
+  description     String
+  category        String
+  estimatedCost   Float          @default(0)
+  durationMinutes Int            @default(60)
+  imageUrl        String?
+  popularityScore Int            @default(50)
+  tripActivities  TripActivity[]
+}
+
+model TripActivity {
+  id                String           @id @default(uuid())
+  stopId            String
+  stop              Stop             @relation(fields: [stopId], references: [id], onDelete: Cascade)
+  catalogActivityId String?
+  catalogActivity   CatalogActivity? @relation(fields: [catalogActivityId], references: [id])
+  title             String
+  category          String
+  scheduledDate     DateTime
+  startTime         String?
+  durationMinutes   Int              @default(60)
+  cost              Float            @default(0)
+  notes             String?
+  orderIndex        Int
+}
+
+model Expense {
+  id          String          @id @default(uuid())
+  tripId      String
+  trip        Trip            @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  category    ExpenseCategory
+  description String
+  amount      Float
+  date        DateTime
+  createdAt   DateTime        @default(now())
+}
+
+model SavedDestination {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, cityId])
+}
