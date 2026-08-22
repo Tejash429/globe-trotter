@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Compass,
   Plus,
-  Calendar,
+  Calendar as CalendarIcon,
   MapPin,
   DollarSign,
   Trash2,
@@ -176,14 +176,25 @@ export default function MyTripsPage() {
             </p>
           </div>
 
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsPlanModalOpen(true)}
-            leftIcon={<Plus className="w-4 h-4" />}
-          >
-            Plan New Trip
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link href="/calendar">
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<CalendarIcon className="w-4 h-4 text-teal-primary" />}
+              >
+                Calendar View
+              </Button>
+            </Link>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsPlanModalOpen(true)}
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              Plan New Trip
+            </Button>
+          </div>
         </div>
 
         {/* Global Error / Action Alerts */}
@@ -313,7 +324,7 @@ export default function MyTripsPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Calendar className="w-3.5 h-3.5 text-amber-accent shrink-0" />
+                      <CalendarIcon className="w-3.5 h-3.5 text-amber-accent shrink-0" />
                       <span className="line-clamp-1">
                         {formatDateRange(trip.startDate, trip.endDate)}
                       </span>

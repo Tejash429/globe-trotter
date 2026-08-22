@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Compass, User, Bell, Map, Ticket, LogOut } from "lucide-react";
+import { Compass, User, Bell, Map, Ticket, LogOut, Calendar } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
 
 interface NavbarProps {
@@ -77,10 +77,18 @@ export function Navbar({ onOpenPlanModal }: NavbarProps) {
             <span>Dashboard</span>
           </Link>
           <Link
-            href="/dashboard"
+            href="/trips"
             className="text-muted-foreground hover:text-teal-primary font-medium flex items-center gap-1.5 transition-colors"
           >
+            <Ticket className="w-4 h-4" />
             <span>My Trips</span>
+          </Link>
+          <Link
+            href="/calendar"
+            className="text-muted-foreground hover:text-teal-primary font-medium flex items-center gap-1.5 transition-colors"
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Calendar</span>
           </Link>
         </nav>
 
