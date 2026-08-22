@@ -8,3 +8,4 @@ export * from "./select";
 export * from "./tabs";
 export * from "./alert";
 export * from "./toast";
+export * from "./dropdown";

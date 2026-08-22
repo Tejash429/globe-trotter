@@ -27,6 +27,12 @@ export function HeroBanner({ onPlanTripClick }: HeroBannerProps) {
 
   useEffect(() => {
     try {
+      let token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      if (!token && typeof document !== "undefined") {
+        const match = document.cookie.match(new RegExp("(^| )token=([^;]+)"));
+        if (match) token = match[2];
+      }
+
       const stored = localStorage.getItem("user");
       if (stored) {
         const u = JSON.parse(stored);
@@ -40,18 +46,48 @@ export function HeroBanner({ onPlanTripClick }: HeroBannerProps) {
         } else if (u.country) {
           setUserLocation(u.country);
         }
+        if (u._count?.trips !== undefined) {
+          setTripsCount(u._count.trips);
+        }
       }
 
-      // Also check if trips are available in local storage or fetch count
-      const token = localStorage.getItem("token");
       if (token) {
-        fetch("/api/v1/trips", {
+        // 1. Fetch live user details
+        fetch("/api/v1/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         })
           .then((res) => res.json())
           .then((data) => {
-            if (data.success && Array.isArray(data.data)) {
-              setTripsCount(data.data.length);
+            if (data.success && data.data) {
+              const u = data.data;
+              if (u.firstName) {
+                setUserName(u.firstName);
+              } else if (u.name) {
+                setUserName(u.name.split(" ")[0]);
+              }
+              if (u.city && u.country) {
+                setUserLocation(`${u.city}, ${u.country}`);
+              } else if (u.country) {
+                setUserLocation(u.country);
+              }
+              localStorage.setItem("user", JSON.stringify(u));
+            }
+          })
+          .catch(() => {});
+
+        // 2. Fetch live trips count
+        fetch("/api/v1/trips?limit=100", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              const list = Array.isArray(data.data?.trips)
+                ? data.data.trips
+                : Array.isArray(data.data)
+                ? data.data
+                : [];
+              setTripsCount(list.length);
             }
           })
           .catch(() => {});
@@ -121,14 +157,14 @@ export function HeroBanner({ onPlanTripClick }: HeroBannerProps) {
             >
               Plan New Trip
             </Button>
-            <Link href="/profile">
+            <Link href="/trips">
               <Button
                 variant="secondary"
                 size="md"
                 rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                 className="bg-surface/90 backdrop-blur-md hover:bg-surface border-white/40 font-medium text-ink text-xs"
               >
-                View My Profile & Passport
+                View My Trips ({tripsCount})
               </Button>
             </Link>
           </div>
