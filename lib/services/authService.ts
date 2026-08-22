@@ -109,4 +109,42 @@ export class AuthService {
       message: "If an account with that email exists, password reset instructions have been sent.",
     };
   }
+
+  static async getCurrentUser(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        name: true,
+        firstName: true,
+        lastName: true,
+        phoneNumber: true,
+        country: true,
+        city: true,
+        additionalInfo: true,
+        avatarUrl: true,
+        language: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            trips: true,
+            savedDestinations: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      const error: any = new Error("User profile not found");
+      error.statusCode = 404;
+      error.code = "NOT_FOUND";
+      throw error;
+    }
+
+    return user;
+  }
 }

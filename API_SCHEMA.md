@@ -238,6 +238,37 @@ Requests password reset.
   }
   ```
 
+#### 4. `GET /api/v1/auth/me` (Profile Screen - Screen 12)
+Fetches all details of the currently logged-in user (name, email, phone, location, avatar, role, and count stats).
+* **Auth Required:** Yes (`Authorization: Bearer <JWT_TOKEN>`)
+* **Response `200 OK`:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "85832d3c-9dfb-4518-b0a3-7a8a97546e4c",
+      "email": "alex.rivera@example.com",
+      "username": null,
+      "name": "Alex Rivera",
+      "firstName": "Alex",
+      "lastName": "Rivera",
+      "phoneNumber": "+15550199",
+      "country": "United States",
+      "city": "San Francisco",
+      "additionalInfo": "Traveler testing GlobeTrotter",
+      "avatarUrl": null,
+      "language": "en",
+      "role": "USER",
+      "createdAt": "2026-08-22T06:14:06.842Z",
+      "updatedAt": "2026-08-22T06:14:06.842Z",
+      "_count": {
+        "trips": 1,
+        "savedDestinations": 0
+      }
+    }
+  }
+  ```
+
 ---
 
 ### ✈️ Trips Management Module (`/api/v1/trips`)

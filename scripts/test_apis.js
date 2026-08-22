@@ -53,6 +53,19 @@ async function testAllEndpoints() {
   console.log("   Status:", loginRes.status);
   console.log("   Login Message:", loginData.message);
 
+  // 2b. TEST GET LOGGED-IN USER PROFILE (GET /api/v1/auth/me & GET /api/v1/users/profile)
+  console.log("\n👤 Testing GET /api/v1/auth/me (Get Logged In User Profile) ...");
+  const meRes = await fetch(`${BASE_URL}/api/v1/auth/me`, {
+    method: "GET",
+    headers: authHeaders,
+  });
+  const meData = await meRes.json();
+  console.log("   Status:", meRes.status);
+  console.log("   User Name:", meData.data?.name);
+  console.log("   User Email:", meData.data?.email);
+  console.log("   User Location:", `${meData.data?.city}, ${meData.data?.country}`);
+
+
   // 3. TEST CREATE TRIP (Screen 4)
   console.log("\n3️⃣ Testing POST /api/v1/trips (Create Trip - Screen 4) ...");
   const createTripRes = await fetch(`${BASE_URL}/api/v1/trips`, {
