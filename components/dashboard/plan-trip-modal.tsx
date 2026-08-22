@@ -206,7 +206,7 @@ export function PlanTripModal({
 
   return (
     <Dialog isOpen={isOpen} onClose={onClose}>
-      <DialogHeader stampText="NEW PASSPORT ROUTE">
+      <DialogHeader stampText="">
         <DialogTitle>Plan a New Trip</DialogTitle>
         <DialogDescription>
           Initiate your multi-city itinerary parameters and budget target.

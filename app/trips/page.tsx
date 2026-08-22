@@ -17,7 +17,7 @@ import {
 import { Navbar } from "@/components/dashboard/navbar";
 import { Footer } from "@/components/dashboard/footer";
 import { PlanTripModal } from "@/components/dashboard/plan-trip-modal";
-import { Button, Card, Badge, Alert, toast } from "@/components/ui";
+import { Button, Badge, ConfirmDeleteModal, toast } from "@/components/ui";
 import { TripCard } from "@/components/trips/trip-card";
 
 interface TripItem {
@@ -87,10 +87,17 @@ export default function MyTripsPage() {
     fetchTrips();
   }, []);
 
-  const handleDeleteTrip = async (tripId: string, tripTitle: string) => {
-    if (!confirm(`Are you sure you want to delete "${tripTitle}"? This cannot be undone.`)) {
-      return;
-    }
+  // Delete Trip State & Handlers
+  const [deletingTripId, setDeletingTripId] = useState<string | null>(null);
+  const [deletingTripTitle, setDeletingTripTitle] = useState<string>("");
+
+  const handlePromptDeleteTrip = (tripId: string, tripTitle: string) => {
+    setDeletingTripId(tripId);
+    setDeletingTripTitle(tripTitle);
+  };
+
+  const handleConfirmDeleteTrip = async () => {
+    if (!deletingTripId) return;
 
     let token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token && typeof document !== "undefined") {
@@ -99,7 +106,10 @@ export default function MyTripsPage() {
     }
     if (!token) return;
 
+    const tripId = deletingTripId;
+    const tripTitle = deletingTripTitle;
     setDeletingId(tripId);
+
     try {
       const res = await fetch(`/api/v1/trips/${tripId}`, {
         method: "DELETE",
@@ -113,6 +123,7 @@ export default function MyTripsPage() {
 
       setTrips((prev) => prev.filter((t) => t.id !== tripId));
       toast.success("Expedition Removed", `"${tripTitle}" was successfully removed.`);
+      setDeletingTripId(null);
     } catch (err: any) {
       toast.error("Deletion Failed", err.message || "Failed to delete trip");
     } finally {
@@ -307,7 +318,7 @@ export default function MyTripsPage() {
                 key={trip.id}
                 trip={trip}
                 viewHref={`/trips/${trip.id}/builder`}
-                onDelete={() => handleDeleteTrip(trip.id, trip.title)}
+                onDelete={() => handlePromptDeleteTrip(trip.id, trip.title)}
                 isDeleting={deletingId === trip.id}
               />
             ))}
@@ -322,6 +333,16 @@ export default function MyTripsPage() {
           setIsPlanModalOpen(false);
           fetchTrips();
         }}
+      />
+
+      {/* Custom Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!deletingTripId}
+        onClose={() => setDeletingTripId(null)}
+        onConfirm={handleConfirmDeleteTrip}
+        title="Delete Trip Expedition"
+        itemName={deletingTripTitle}
+        isLoading={!!deletingId}
       />
 
       {/* Discreet Workspace Status Strip */}
