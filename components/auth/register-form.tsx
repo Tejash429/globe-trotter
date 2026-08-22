@@ -18,7 +18,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { Button, Input, Textarea, Card, Badge, Alert } from "@/components/ui";
+import { Button, Input, Textarea, Card, Badge, toast } from "@/components/ui";
 
 interface RegisterFormProps {
   onSwitchToLogin?: () => void;
@@ -40,8 +40,6 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -63,26 +61,25 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
     if (!formData.firstName.trim() || !formData.lastName.trim()) {
-      setError("Please enter your First Name and Last Name.");
+      toast.error("Name Required", "Please enter your First Name and Last Name.");
       return;
     }
     if (!formData.email.trim()) {
-      setError("Please enter a valid email address.");
+      toast.error("Email Required", "Please enter a valid email address.");
       return;
     }
     if (!formData.password || formData.password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+      toast.error("Weak Password", "Password must be at least 6 characters long.");
       return;
     }
     if (!formData.phone.trim()) {
-      setError("Please enter your phone number.");
+      toast.error("Phone Required", "Please enter your phone number.");
       return;
     }
     if (!formData.city.trim() || !formData.country.trim()) {
-      setError("Please specify your city and country.");
+      toast.error("Location Required", "Please specify your base city and country.");
       return;
     }
 
@@ -110,22 +107,31 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           data.error?.message ||
           data.error?.details?.[0]?.issue ||
           "Registration failed. Please check your information.";
-        throw new Error(errorMsg);
+        toast.error("Registration Failed", errorMsg);
+        return;
       }
 
       if (data.data?.token) {
         localStorage.setItem("token", data.data.token);
+        // Set cookie for middleware route protection
+        document.cookie = `token=${data.data.token}; path=/; max-age=604800; SameSite=Lax`;
         if (data.data.user) {
           localStorage.setItem("user", JSON.stringify(data.data.user));
         }
       }
 
-      setSuccess(true);
+      toast.success(
+        "Passport Created",
+        `Welcome aboard, ${formData.firstName}! Redirecting to Dashboard...`
+      );
+
       setTimeout(() => {
-        router.push("/dashboard");
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectUrl = urlParams.get("redirect") || "/dashboard";
+        router.push(redirectUrl);
       }, 700);
     } catch (err: any) {
-      setError(err.message || "Registration failed. Please check your data.");
+      toast.error("Connection Error", err.message || "Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -143,9 +149,6 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             Create your GlobeTrotter passport & traveler profile
           </p>
         </div>
-        <Badge variant="teal">
-          <span>PORT #02</span>
-        </Badge>
       </div>
 
       {/* Screen 2 Photo Circle Avatar Upload */}
@@ -188,24 +191,6 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           Click to upload Passport Photo
         </span>
       </div>
-
-      {/* Error Alert */}
-      {error && (
-        <div className="mb-5">
-          <Alert variant="danger" badgeText="ALERT">
-            {error}
-          </Alert>
-        </div>
-      )}
-
-      {/* Success Notification */}
-      {success && (
-        <div className="mb-5">
-          <Alert variant="success" badgeText="PASSPORT CREATED">
-            Welcome aboard! Your passport has been accredited. Redirecting to Dashboard...
-          </Alert>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Row 1: First Name & Last Name */}
