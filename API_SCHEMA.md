@@ -1,12 +1,12 @@
 # 🌍 GlobeTrotter Backend API Specification & Data Contracts
 
-This document defines the complete backend REST API schema for **GlobeTrotter — Empowering Personalized Travel Planning**. Frontend developers can use this schema to construct API service layers, TypeScript interfaces, and mock data handlers.
+This document defines the comprehensive backend REST API schema for **GlobeTrotter — Empowering Personalized Travel Planning**. Frontend developers can use this schema to construct API service layers, TypeScript interfaces, and mock data handlers.
 
 ---
 
 ## 🔑 1. Base URL & Authentication
 
-* **Base URL:** `https://api.globetrotter.com/v1` (or `http://localhost:5000/api/v1`)
+* **Base URL:** `http://localhost:3000/api/v1` (or `https://api.globetrotter.com/v1` in production)
 * **Content-Type:** `application/json`
 * **Authentication Header:**
   ```http
@@ -21,8 +21,8 @@ This document defines the complete backend REST API schema for **GlobeTrotter �
 ```json
 {
   "success": true,
-  "data": { ... },
-  "message": "Operation completed successfully"
+  "message": "Operation completed successfully",
+  "data": { ... }
 }
 ```
 
@@ -45,7 +45,7 @@ This document defines the complete backend REST API schema for **GlobeTrotter �
 {
   "success": false,
   "error": {
-    "code": "UNAUTHORIZED | NOT_FOUND | VALIDATION_ERROR | OVER_BUDGET_WARNING | INTERNAL_SERVER_ERROR",
+    "code": "UNAUTHORIZED | NOT_FOUND | VALIDATION_ERROR | EMAIL_ALREADY_EXISTS | INVALID_CREDENTIALS | INTERNAL_SERVER_ERROR",
     "message": "Human-readable error description",
     "details": [
       {
@@ -67,11 +67,17 @@ interface User {
   id: string;
   email: string;
   name: string;
-  avatarUrl?: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  country?: string;
+  city?: string;
+  additionalInfo?: string;
+  avatarUrl?: string | null;
   language: string; // e.g., 'en', 'es', 'fr'
   role: 'USER' | 'ADMIN';
   createdAt: string; // ISO 8601
-  updatedAt: string;
+  updatedAt?: string;
 }
 ```
 
@@ -81,18 +87,55 @@ interface Trip {
   id: string;
   userId: string;
   title: string;
+  destinationPlace: string; // e.g., 'Paris', 'Tokyo'
   description?: string;
   coverImage?: string;
-  startDate: string; // YYYY-MM-DD
-  endDate: string; // YYYY-MM-DD
-  durationDays: number;
+  startDate: string; // ISO 8601 Date
+  endDate: string; // ISO 8601 Date
   totalBudget: number;
   currency: string; // e.g., 'USD', 'EUR'
   visibility: 'PRIVATE' | 'PUBLIC';
   shareToken?: string;
-  destinationCount: number;
+  sections?: ItinerarySection[];
+  sectionsCount?: number;
+  totalSectionBudget?: number;
+  totalExpenses?: number;
+  totalEstimatedCost?: number;
+  remainingBudget?: number;
+  status?: 'upcoming' | 'ongoing' | 'completed';
   createdAt: string;
   updatedAt: string;
+}
+```
+
+### `ItinerarySection` (Screen 5 Section Card)
+```typescript
+type SectionType = 'TRAVEL' | 'ACCOMMODATION' | 'ACTIVITY' | 'MISCELLANEOUS';
+
+interface ItinerarySection {
+  id: string;
+  tripId: string;
+  title: string; // e.g., 'Section 1: Air France Flight to Paris'
+  type: SectionType;
+  description?: string; // Information about this section
+  startDate: string; // ISO 8601 Date
+  endDate: string; // ISO 8601 Date
+  budget: number; // Allocated section budget
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### `DestinationSuggestion` (Screen 4 Recommendations)
+```typescript
+interface DestinationSuggestion {
+  id: string;
+  title: string;
+  category: 'SIGHTSEEING' | 'FOOD_TOUR' | 'CULTURE' | 'ADVENTURE' | 'RELAXATION' | 'SHOPPING';
+  description: string;
+  estimatedCost: number;
+  imageUrl: string;
 }
 ```
 
@@ -105,84 +148,9 @@ interface City {
   region: string;
   description: string;
   imageUrl: string;
-  costIndex: 'BUDGET' | 'MODERATE' | 'LUXURY'; // 1-3 scale
+  costIndex: 'BUDGET' | 'MODERATE' | 'LUXURY';
   averageDailyCost: number;
   popularityScore: number; // 1-100
-}
-```
-
-### `Stop` (City in Itinerary)
-```typescript
-interface Stop {
-  id: string;
-  tripId: string;
-  cityId: string;
-  city: City;
-  arrivalDate: string; // YYYY-MM-DD
-  departureDate: string; // YYYY-MM-DD
-  orderIndex: number;
-  activities: TripActivity[];
-}
-```
-
-### `CatalogActivity`
-```typescript
-interface CatalogActivity {
-  id: string;
-  cityId: string;
-  title: string;
-  description: string;
-  category: 'SIGHTSEEING' | 'FOOD_TOUR' | 'ADVENTURE' | 'CULTURE' | 'RELAXATION' | 'SHOPPING';
-  estimatedCost: number;
-  durationMinutes: number;
-  imageUrl?: string;
-  location?: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-}
-```
-
-### `TripActivity`
-```typescript
-interface TripActivity {
-  id: string;
-  stopId: string;
-  catalogActivityId?: string;
-  title: string;
-  category: string;
-  scheduledDate: string; // YYYY-MM-DD
-  startTime?: string; // HH:mm (24hr)
-  durationMinutes: number;
-  cost: number;
-  notes?: string;
-  orderIndex: number;
-}
-```
-
-### `BudgetBreakdown`
-```typescript
-interface BudgetBreakdown {
-  totalBudget: number;
-  estimatedTotalCost: number;
-  remainingBudget: number;
-  currency: string;
-  averageDailyCost: number;
-  isOverBudget: boolean;
-  categories: {
-    transport: number;
-    accommodation: number;
-    activities: number;
-    meals: number;
-    miscellaneous: number;
-  };
-  dailySpending: Array<{
-    date: string;
-    city: string;
-    totalCost: number;
-    isOverDailyAverage: boolean;
-  }>;
 }
 ```
 
@@ -192,20 +160,20 @@ interface BudgetBreakdown {
 
 ### 🟢 Auth Module (`/api/v1/auth`)
 
-#### 1. `POST /api/v1/auth/signup`
+#### 1. `POST /api/v1/auth/signup` (Screen 1)
 Creates a new user account.
 * **Auth Required:** No
 * **Request Body:**
   ```json
   {
-    "firstName": "Jane",
-    "lastName": "Doe",
-    "email": "jane@example.com",
+    "firstName": "Alex",
+    "lastName": "Rivera",
+    "email": "alex.rivera@example.com",
     "password": "Password123!",
-    "phoneNumber": "+1234567890",
+    "phoneNumber": "+15550199",
     "country": "United States",
-    "city": "New York",
-    "additionalInfo": "Avid hiker and food enthusiast"
+    "city": "San Francisco",
+    "additionalInfo": "Traveler testing GlobeTrotter"
   }
   ```
 * **Response `201 Created`:**
@@ -215,112 +183,57 @@ Creates a new user account.
     "message": "User registered successfully",
     "data": {
       "user": {
-        "id": "usr_123",
-        "name": "Jane Doe",
-        "firstName": "Jane",
-        "lastName": "Doe",
-        "email": "jane@example.com",
-        "phoneNumber": "+1234567890",
+        "id": "11f82d25-f9ff-4ee3-993e-0e0860ce013b",
+        "name": "Alex Rivera",
+        "firstName": "Alex",
+        "lastName": "Rivera",
+        "email": "alex.rivera@example.com",
+        "phoneNumber": "+15550199",
         "country": "United States",
-        "city": "New York",
-        "additionalInfo": "Avid hiker and food enthusiast",
+        "city": "San Francisco",
+        "additionalInfo": "Traveler testing GlobeTrotter",
         "avatarUrl": null,
-        "language": "en"
+        "language": "en",
+        "role": "USER",
+        "createdAt": "2026-08-22T05:55:59.491Z"
       },
-      "token": "eyJhbGciOiJIUzI1Ni..."
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
     }
   }
   ```
 
-#### 2. `POST /api/v1/auth/login`
+#### 2. `POST /api/v1/auth/login` (Screen 1)
 Authenticates a user and returns JWT.
 * **Auth Required:** No
 * **Request Body:**
   ```json
   {
-    "email": "jane@example.com",
+    "email": "alex.rivera@example.com",
     "password": "Password123!"
   }
   ```
-* **Response `200 OK`:** Same payload as signup.
-
-#### 3. `POST /api/v1/auth/forgot-password`
-Requests password reset email.
-* **Request Body:** `{ "email": "jane@example.com" }`
-* **Response `200 OK`:** `{ "success": true, "message": "Password reset link sent to your email." }`
-
----
-
-### 👤 User & Profile Module (`/api/v1/users`)
-
-#### 4. `GET /api/v1/users/profile`
-Get current user's profile and saved preferences.
-* **Auth Required:** Yes
-
-#### 5. `PUT /api/v1/users/profile`
-Update profile details.
-* **Auth Required:** Yes
-* **Request Body:**
+* **Response `200 OK`:**
   ```json
   {
-    "name": "Jane Smith",
-    "avatarUrl": "https://cdn.globetrotter.com/avatars/jane.jpg",
-    "language": "es"
+    "success": true,
+    "message": "Login successful",
+    "data": {
+      "user": { ... },
+      "token": "eyJhbGciOiJIUzI1Ni..."
+    }
   }
   ```
 
-#### 6. `DELETE /api/v1/users/profile`
-Delete account and all associated trips.
-
-#### 7. `GET /api/v1/users/saved-destinations`
-Get bookmarked cities list.
-
-#### 8. `POST /api/v1/users/saved-destinations`
-Save or remove destination bookmark.
-* **Request Body:** `{ "cityId": "city_789", "action": "SAVE" }` // or "REMOVE"
-
----
-
-### 📊 Dashboard Module (`/api/v1/dashboard`)
-
-#### 9. `GET /api/v1/dashboard`
-Fetches personalized home screen data.
-* **Auth Required:** Yes
+#### 3. `POST /api/v1/auth/forgot-password` (Screen 1)
+Requests password reset.
+* **Auth Required:** No
+* **Request Body:** `{ "email": "alex.rivera@example.com" }`
 * **Response `200 OK`:**
   ```json
   {
     "success": true,
     "data": {
-      "user": {
-        "name": "Jane"
-      },
-      "recentTrips": [
-        {
-          "id": "trip_001",
-          "title": "Euro Summer 2026",
-          "startDate": "2026-07-01",
-          "endDate": "2026-07-15",
-          "destinationCount": 3,
-          "coverImage": "https://images.unsplash.com/photo-paris.jpg",
-          "totalBudget": 3500,
-          "estimatedCost": 3100
-        }
-      ],
-      "recommendedDestinations": [
-        {
-          "id": "city_tokyo",
-          "name": "Tokyo",
-          "country": "Japan",
-          "imageUrl": "https://images.unsplash.com/photo-tokyo.jpg",
-          "costIndex": "MODERATE",
-          "averageDailyCost": 180
-        }
-      ],
-      "budgetHighlights": {
-        "activeTripsCount": 2,
-        "totalPlannedBudget": 6000,
-        "totalEstimatedExpenses": 5400
-      }
+      "message": "If an account with that email exists, password reset instructions have been sent."
     }
   }
   ```
@@ -329,306 +242,225 @@ Fetches personalized home screen data.
 
 ### ✈️ Trips Management Module (`/api/v1/trips`)
 
-#### 10. `POST /api/v1/trips` (Create Trip Screen)
-Initialize a new travel plan.
+#### 4. `POST /api/v1/trips` (Create Trip - Screen 3 & 4)
+Initialize a new travel plan. Generates catalog suggestions based on destination.
 * **Auth Required:** Yes
 * **Request Body:**
   ```json
   {
-    "title": "Japanese Alpine Adventure",
-    "description": "2-week trip exploring Tokyo, Kyoto, and Nagano.",
-    "startDate": "2026-10-10",
-    "endDate": "2026-10-24",
-    "totalBudget": 4000,
-    "currency": "USD",
-    "coverImage": "https://images.unsplash.com/photo-fuji.jpg"
+    "title": "Autumn Escapade in Paris",
+    "destinationPlace": "Paris",
+    "startDate": "2026-10-01",
+    "endDate": "2026-10-10",
+    "totalBudget": 3000,
+    "description": "Visiting Paris monuments and cafes",
+    "currency": "USD"
   }
   ```
-
-#### 11. `GET /api/v1/trips` (My Trips Screen)
-List user's trips with filters and pagination.
-* **Query Params:** `status=upcoming|past|draft`, `search=keywords`, `page=1`, `limit=10`
-* **Response `200 OK`:** Array of `Trip` objects.
-
-#### 12. `GET /api/v1/trips/:tripId`
-Get full details of a specific trip including stops, activities, and budget summary.
-
-#### 13. `PUT /api/v1/trips/:tripId`
-Update trip metadata (dates, title, budget, cover photo).
-
-#### 14. `DELETE /api/v1/trips/:tripId`
-Delete a trip and its stops.
-
-#### 15. `POST /api/v1/trips/:tripId/clone`
-Copy a public/shared trip into the current user's account.
-
----
-
-### 🗺️ Itinerary Builder & Stops Module (`/api/v1/trips/:tripId/stops`)
-
-#### 16. `POST /api/v1/trips/:tripId/stops`
-Add a city stop to an itinerary.
-* **Request Body:**
+* **Response `201 Created`:**
   ```json
   {
-    "cityId": "city_kyoto",
-    "arrivalDate": "2026-10-14",
-    "departureDate": "2026-10-18",
-    "orderIndex": 2
+    "success": true,
+    "message": "Trip created successfully",
+    "data": {
+      "trip": {
+        "id": "5ce00391-8d49-4e49-8862-773a0398583f",
+        "userId": "11f82d25-f9ff-4ee3-993e-0e0860ce013b",
+        "title": "Autumn Escapade in Paris",
+        "destinationPlace": "Paris",
+        "description": "Visiting Paris monuments and cafes",
+        "coverImage": null,
+        "startDate": "2026-10-01T00:00:00.000Z",
+        "endDate": "2026-10-10T00:00:00.000Z",
+        "totalBudget": 3000,
+        "currency": "USD",
+        "visibility": "PRIVATE",
+        "shareToken": "...",
+        "sections": [],
+        "createdAt": "2026-08-22T05:56:00.000Z",
+        "updatedAt": "2026-08-22T05:56:00.000Z"
+      },
+      "suggestions": [
+        {
+          "id": "sug_1",
+          "title": "Explore Central Paris",
+          "category": "SIGHTSEEING",
+          "description": "Must-see landmarks and historic walking tours around central Paris.",
+          "estimatedCost": 25,
+          "imageUrl": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34"
+        }
+      ]
+    }
   }
   ```
 
-#### 17. `PUT /api/v1/trips/:tripId/stops/:stopId`
-Update stop dates or notes.
-
-#### 18. `DELETE /api/v1/trips/:tripId/stops/:stopId`
-Remove city stop from itinerary.
-
-#### 19. `PUT /api/v1/trips/:tripId/stops/reorder`
-Reorder multi-city stops sequence.
-* **Request Body:**
-  ```json
-  {
-    "stopOrder": [
-      { "stopId": "stop_1", "orderIndex": 1 },
-      { "stopId": "stop_2", "orderIndex": 2 }
-    ]
-  }
-  ```
-
----
-
-### 🎨 Stop Activities & Timeline Builder (`/api/v1/trips/:tripId/activities`)
-
-#### 20. `POST /api/v1/trips/:tripId/stops/:stopId/activities`
-Add an activity to a specific stop.
-* **Request Body:**
-  ```json
-  {
-    "catalogActivityId": "act_fushimi_inari",
-    "title": "Fushimi Inari Shrine Hike",
-    "category": "CULTURE",
-    "scheduledDate": "2026-10-15",
-    "startTime": "08:30",
-    "durationMinutes": 180,
-    "cost": 0,
-    "notes": "Go early to avoid crowds!"
-  }
-  ```
-
-#### 21. `PUT /api/v1/trips/:tripId/activities/:activityId`
-Update scheduled activity details (time, cost, notes).
-
-#### 22. `DELETE /api/v1/trips/:tripId/activities/:activityId`
-Delete activity from stop.
-
-#### 23. `PUT /api/v1/trips/:tripId/activities/reorder`
-Reorder activities within a day / drag-to-reorder.
-* **Request Body:**
-  ```json
-  {
-    "activityOrder": [
-      { "activityId": "act_101", "startTime": "09:00", "orderIndex": 1 },
-      { "activityId": "act_102", "startTime": "11:30", "orderIndex": 2 }
-    ]
-  }
-  ```
-
----
-
-### 🏙️ Discovery Module — City & Activity Search (`/api/v1/cities`, `/api/v1/activities`)
-
-#### 24. `GET /api/v1/cities` (City Search Screen)
-Search global destinations with filters.
-* **Query Params:** `q=Paris`, `country=France`, `costIndex=BUDGET|MODERATE|LUXURY`, `popular=true`, `page=1`, `limit=20`
+#### 5. `GET /api/v1/trips` (My Trips Screen - Screen 4)
+List user trips with status filtering and pagination.
+* **Auth Required:** Yes
+* **Query Params:**
+  * `status`: `upcoming` | `ongoing` | `completed`
+  * `search`: string keyword
+  * `sortBy`: `startDate` | `title` | `totalBudget`
+  * `page`: integer (default: 1)
+  * `limit`: integer (default: 10)
 * **Response `200 OK`:**
   ```json
   {
     "success": true,
     "data": [
       {
-        "id": "city_paris",
-        "name": "Paris",
-        "country": "France",
-        "region": "Europe",
-        "description": "City of Light, famous for art, cuisine, and culture.",
-        "imageUrl": "https://images.unsplash.com/photo-paris.jpg",
-        "costIndex": "LUXURY",
-        "averageDailyCost": 250,
-        "popularityScore": 98
+        "id": "5ce00391-8d49-4e49-8862-773a0398583f",
+        "userId": "11f82d25-f9ff-4ee3-993e-0e0860ce013b",
+        "title": "Autumn Escapade in Paris",
+        "destinationPlace": "Paris",
+        "description": "Visiting Paris monuments and cafes",
+        "startDate": "2026-10-01T00:00:00.000Z",
+        "endDate": "2026-10-10T00:00:00.000Z",
+        "totalBudget": 3000,
+        "currency": "USD",
+        "visibility": "PRIVATE",
+        "status": "upcoming",
+        "sectionsCount": 3,
+        "totalSectionBudget": 2500
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "totalCount": 1,
+      "totalPages": 1
+    }
+  }
+  ```
+
+#### 6. `GET /api/v1/trips/:tripId` (Itinerary View - Screen 6)
+Get full trip details including section breakdowns and budget computations.
+* **Auth Required:** Yes
+* **Response `200 OK`:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "5ce00391-8d49-4e49-8862-773a0398583f",
+      "title": "Autumn Escapade in Paris",
+      "destinationPlace": "Paris",
+      "description": "Visiting Paris monuments and cafes",
+      "startDate": "2026-10-01T00:00:00.000Z",
+      "endDate": "2026-10-10T00:00:00.000Z",
+      "totalBudget": 3000,
+      "currency": "USD",
+      "visibility": "PRIVATE",
+      "sections": [ ... ],
+      "expenses": [],
+      "sectionsCount": 3,
+      "totalSectionBudget": 2500,
+      "totalExpenses": 0,
+      "totalEstimatedCost": 2500,
+      "remainingBudget": 500
+    }
+  }
+  ```
+
+#### 7. `PUT /api/v1/trips/:tripId`
+Update trip metadata (title, dates, budget, visibility).
+* **Auth Required:** Yes
+* **Request Body:** Partial `createTripSchema` fields.
+
+#### 8. `DELETE /api/v1/trips/:tripId`
+Delete a trip and all its associated itinerary sections.
+* **Auth Required:** Yes
+* **Response `200 OK`:** `{ "success": true, "message": "Trip deleted successfully" }`
+
+---
+
+### 🗺️ Itinerary Builder & Sections Module (`/api/v1/trips/:tripId/sections`)
+
+#### 9. `POST /api/v1/trips/:tripId/sections` (Itinerary Builder - Screen 5)
+Add single or batch itinerary sections to a trip.
+
+* **Single Section Payload:**
+  ```json
+  {
+    "title": "Hilton Paris Opera Stay",
+    "type": "ACCOMMODATION",
+    "description": "Hotel reservation with breakfast included",
+    "startDate": "2026-10-01",
+    "endDate": "2026-10-06",
+    "budget": 1200,
+    "orderIndex": 1
+  }
+  ```
+
+* **Batch Sections Payload:**
+  ```json
+  {
+    "sections": [
+      {
+        "title": "Section 1: Air France Flight to Paris",
+        "type": "TRAVEL",
+        "description": "Flight from SFO to CDG",
+        "startDate": "2026-10-01",
+        "endDate": "2026-10-01",
+        "budget": 850,
+        "orderIndex": 1
+      },
+      {
+        "title": "Section 2: Hilton Paris Opera Stay",
+        "type": "ACCOMMODATION",
+        "description": "Hotel reservation with breakfast included",
+        "startDate": "2026-10-01",
+        "endDate": "2026-10-06",
+        "budget": 1200,
+        "orderIndex": 2
+      },
+      {
+        "title": "Section 3: Louvre & Eiffel Guided Tours",
+        "type": "ACTIVITY",
+        "description": "Skip-the-line museum passes and Eiffel admission",
+        "startDate": "2026-10-02",
+        "endDate": "2026-10-05",
+        "budget": 450,
+        "orderIndex": 3
       }
     ]
   }
   ```
+* **Response `201 Created`:** Array of created `ItinerarySection` items.
 
-#### 25. `GET /api/v1/cities/:cityId`
-Get single city details and top recommended activities.
-
-#### 26. `GET /api/v1/activities` (Activity Search Screen)
-Search activities catalog.
-* **Query Params:** `cityId=city_paris`, `category=FOOD_TOUR`, `maxCost=100`, `maxDuration=120`
-
----
-
-### 💰 Budget & Cost Breakdown Module (`/api/v1/trips/:tripId/budget`)
-
-#### 27. `GET /api/v1/trips/:tripId/budget` (Trip Budget Screen)
-Get financial summary and automated breakdown.
-* **Response `200 OK`:**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "totalBudget": 3000,
-      "estimatedTotalCost": 2850,
-      "remainingBudget": 150,
-      "currency": "USD",
-      "averageDailyCost": 190,
-      "isOverBudget": false,
-      "categories": {
-        "transport": 800,
-        "accommodation": 1200,
-        "activities": 450,
-        "meals": 400,
-        "miscellaneous": 0
-      },
-      "dailySpending": [
-        {
-          "date": "2026-10-10",
-          "city": "Tokyo",
-          "totalCost": 220,
-          "isOverDailyAverage": true
-        }
-      ],
-      "alerts": [
-        {
-          "date": "2026-10-10",
-          "type": "OVER_DAILY_AVERAGE",
-          "message": "Spending on 2026-10-10 exceeds daily average target of $190 by $30."
-        }
-      ]
-    }
-  }
-  ```
-
-#### 28. `POST /api/v1/trips/:tripId/expenses`
-Add custom fixed expense item (e.g. Flight tickets, Hotel reservation).
-* **Request Body:**
-  ```json
-  {
-    "category": "TRANSPORT", // "ACCOMMODATION" | "TRANSPORT" | "MEALS" | "MISC"
-    "description": "Flight from JFK to NRT",
-    "amount": 750,
-    "date": "2026-10-10"
-  }
-  ```
-
----
-
-### 📅 Timeline & Calendar View Module (`/api/v1/trips/:tripId/timeline`)
-
-#### 29. `GET /api/v1/trips/:tripId/timeline` (Trip Calendar Screen)
-Returns day-by-day structured itinerary flow optimized for visual timeline or calendar view.
-* **Response `200 OK`:**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "tripId": "trip_001",
-      "days": [
-        {
-          "date": "2026-10-10",
-          "dayNumber": 1,
-          "stopId": "stop_tokyo",
-          "cityName": "Tokyo",
-          "activities": [
-            {
-              "id": "act_1",
-              "title": "Arrive at Narita & Express Train",
-              "category": "TRANSPORT",
-              "startTime": "14:00",
-              "durationMinutes": 120,
-              "cost": 30
-            }
-          ]
-        }
-      ]
-    }
-  }
-  ```
-
----
-
-### 🔗 Public Sharing & Social Module (`/api/v1/public/trips`, `/api/v1/trips/:tripId/share`)
-
-#### 30. `PUT /api/v1/trips/:tripId/share`
-Toggle public visibility and get unique share URL.
-* **Request Body:** `{ "visibility": "PUBLIC" }`
-* **Response `200 OK`:**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "visibility": "PUBLIC",
-      "shareUrl": "https://globetrotter.app/shared/t_98374hkj293"
-    }
-  }
-  ```
-
-#### 31. `GET /api/v1/public/trips/:shareToken` (Shared Itinerary Screen)
-Fetch read-only public trip details for non-authenticated or guest users.
-
----
-
-### 🛡️ Admin & Analytics Module (`/api/v1/admin`)
-
-#### 32. `GET /api/v1/admin/analytics`
-Admin dashboard summary metrics.
-* **Auth Required:** Yes (Role: ADMIN)
-* **Response `200 OK`:**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "totalUsers": 1250,
-      "totalTripsCreated": 3420,
-      "topCities": [
-        { "cityName": "Paris", "tripCount": 420 },
-        { "cityName": "Tokyo", "tripCount": 390 }
-      ],
-      "topCategories": [
-        { "category": "CULTURE", "count": 1200 },
-        { "category": "FOOD_TOUR", "count": 980 }
-      ]
-    }
-  }
-  ```
-
----
-
-### 📸 File & Media Upload Module (`/api/v1/upload`)
-
-#### 33. `POST /api/v1/upload`
-Upload trip cover photo or user profile avatar.
+#### 10. `GET /api/v1/trips/:tripId/sections` (Get Sections - Screen 5)
+Retrieves all sections for a trip alongside trip-level budget calculations.
 * **Auth Required:** Yes
-* **Content-Type:** `multipart/form-data`
-* **Form Field:** `file` (image file binary)
-* **Response `201 Created`:**
+* **Response `200 OK`:**
   ```json
   {
     "success": true,
     "data": {
-      "fileUrl": "https://cdn.globetrotter.com/uploads/cover_98234.jpg",
-      "fileName": "cover_98234.jpg",
-      "mimeType": "image/jpeg",
-      "sizeBytes": 482100
+      "tripId": "5ce00391-8d49-4e49-8862-773a0398583f",
+      "tripTitle": "Autumn Escapade in Paris",
+      "destinationPlace": "Paris",
+      "totalTripBudget": 3000,
+      "totalSectionBudget": 2500,
+      "remainingTripBudget": 500,
+      "sections": [
+        {
+          "id": "sec_101",
+          "tripId": "5ce00391-8d49-4e49-8862-773a0398583f",
+          "title": "Section 1: Air France Flight to Paris",
+          "type": "TRAVEL",
+          "description": "Flight from SFO to CDG",
+          "startDate": "2026-10-01T00:00:00.000Z",
+          "endDate": "2026-10-01T00:00:00.000Z",
+          "budget": 850,
+          "orderIndex": 1
+        }
+      ]
     }
   }
   ```
 
 ---
 
-## 📐 5. Recommended Prisma Schema (`schema.prisma`)
+## 📐 5. Database Prisma Schema (`schema.prisma`)
 
 ```prisma
 generator client {
@@ -638,6 +470,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -664,11 +497,25 @@ enum ExpenseCategory {
   MISCELLANEOUS
 }
 
+enum SectionType {
+  TRAVEL
+  ACCOMMODATION
+  ACTIVITY
+  MISCELLANEOUS
+}
+
 model User {
   id                String             @id @default(uuid())
   email             String             @unique
+  username          String?            @unique
   passwordHash      String
   name              String
+  firstName         String?
+  lastName          String?
+  phoneNumber       String?
+  city              String?
+  country           String?
+  additionalInfo    String?
   avatarUrl         String?
   language          String             @default("en")
   role              Role               @default(USER)
@@ -679,22 +526,38 @@ model User {
 }
 
 model Trip {
-  id               String       @id @default(uuid())
+  id               String             @id @default(uuid())
   userId           String
-  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   title            String
+  destinationPlace String
   description      String?
   coverImage       String?
   startDate        DateTime
   endDate          DateTime
-  totalBudget      Float        @default(0)
-  currency         String       @default("USD")
-  visibility       Visibility   @default(PRIVATE)
-  shareToken       String?      @unique @default(uuid())
-  stops            Stop[]
+  totalBudget      Float              @default(0)
+  currency         String             @default("USD")
+  visibility       Visibility         @default(PRIVATE)
+  shareToken       String?            @unique @default(uuid())
+  sections         ItinerarySection[]
   expenses         Expense[]
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model ItinerarySection {
+  id          String      @id @default(uuid())
+  tripId      String
+  trip        Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  title       String
+  type        SectionType @default(ACTIVITY)
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  budget      Float       @default(0)
+  orderIndex  Int         @default(1)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 model City {
@@ -707,52 +570,21 @@ model City {
   costIndex         CostIndex          @default(MODERATE)
   averageDailyCost  Float
   popularityScore   Int                @default(50)
-  stops             Stop[]
   catalogActivities CatalogActivity[]
   savedBy           SavedDestination[]
 }
 
-model Stop {
-  id            String         @id @default(uuid())
-  tripId        String
-  trip          Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  cityId        String
-  city          City           @relation(fields: [cityId], references: [id])
-  arrivalDate   DateTime
-  departureDate DateTime
-  orderIndex    Int
-  activities    TripActivity[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-}
-
 model CatalogActivity {
-  id              String         @id @default(uuid())
+  id              String   @id @default(uuid())
   cityId          String
-  city            City           @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  city            City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
   title           String
   description     String
   category        String
-  estimatedCost   Float          @default(0)
-  durationMinutes Int            @default(60)
+  estimatedCost   Float    @default(0)
+  durationMinutes Int      @default(60)
   imageUrl        String?
-  tripActivities  TripActivity[]
-}
-
-model TripActivity {
-  id                String           @id @default(uuid())
-  stopId            String
-  stop              Stop             @relation(fields: [stopId], references: [id], onDelete: Cascade)
-  catalogActivityId String?
-  catalogActivity   CatalogActivity? @relation(fields: [catalogActivityId], references: [id])
-  title             String
-  category          String
-  scheduledDate     DateTime
-  startTime         String?
-  durationMinutes   Int              @default(60)
-  cost              Float            @default(0)
-  notes             String?
-  orderIndex        Int
+  popularityScore Int      @default(50)
 }
 
 model Expense {
