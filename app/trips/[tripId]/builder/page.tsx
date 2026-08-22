@@ -28,7 +28,7 @@ import {
   Save,
 } from "lucide-react";
 import { Navbar } from "@/components/dashboard/navbar";
-import { Button, Card, Badge, Alert } from "@/components/ui";
+import { Button, Card, Badge, Alert,toast } from "@/components/ui";
 import { AddSectionModal, SectionData } from "@/components/itinerary/add-section-modal";
 
 interface TripDetails {
@@ -129,7 +129,7 @@ export default function ItineraryBuilderPage({
 
   // Section Save Callback
   const handleSectionSaved = () => {
-    setActionSuccess("Itinerary stop updated successfully!");
+    // setActionSuccess("Itinerary stop updated successfully!");
     fetchData();
     setTimeout(() => setActionSuccess(""), 3000);
   };
@@ -153,7 +153,8 @@ export default function ItineraryBuilderPage({
         throw new Error(data.error?.message || "Failed to delete section");
       }
 
-      setActionSuccess("Stop removed from itinerary.");
+      // 
+      toast.success("Itinerary stop removed successfully")
       fetchData();
       setTimeout(() => setActionSuccess(""), 3000);
     } catch (err: any) {

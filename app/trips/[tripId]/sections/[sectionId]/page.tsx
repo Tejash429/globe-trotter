@@ -24,7 +24,7 @@ import {
   Save,
 } from "lucide-react";
 import { Navbar } from "@/components/dashboard/navbar";
-import { Button, Card, Badge, Alert, Input, Textarea, Select, Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from "@/components/ui";
+import { Button, Card, Badge, Alert, Input, Textarea, Select, Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter, toast } from "@/components/ui";
 
 interface SectionActivity {
   id: string;
@@ -72,7 +72,6 @@ export default function SectionActivitiesPage({
   const [showAllSuggestions, setShowAllSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [actionSuccess, setActionSuccess] = useState("");
 
   // Activity Modal State
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
@@ -202,14 +201,14 @@ export default function SectionActivitiesPage({
       });
 
       const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error?.message || "Failed to save activity");
-      }
-
-      setActionSuccess(isEdit ? "Activity updated!" : "Activity added to section!");
+      toast.success(
+        isEdit ? "Activity Updated" : "Activity Added",
+        isEdit
+          ? `Activity "${activityForm.title}" has been updated.`
+          : `New activity "${activityForm.title}" added to section!`
+      );
       setIsActivityModalOpen(false);
       fetchSectionData();
-      setTimeout(() => setActionSuccess(""), 3000);
     } catch (err: any) {
       setActivityError(err.message || "Failed to save activity");
     } finally {
@@ -235,9 +234,8 @@ export default function SectionActivitiesPage({
         throw new Error(data.error?.message || "Failed to delete activity");
       }
 
-      setActionSuccess("Activity deleted.");
+      toast.info("Activity Deleted", "Activity removed from itinerary section.");
       fetchSectionData();
-      setTimeout(() => setActionSuccess(""), 3000);
     } catch (err: any) {
       alert(err.message || "Failed to delete activity");
     }
@@ -268,10 +266,10 @@ export default function SectionActivitiesPage({
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Itinerary Builder</span>
             </Link>
-            <span className="text-border-muted">•</span>
+            {/* <span className="text-border-muted">•</span>
             <span className="stamp-badge text-[11px]">
               STOP ACTIVITIES & EXPERIENCES
-            </span>
+            </span> */}
           </div>
 
           <div className="flex items-center gap-2">
@@ -279,7 +277,7 @@ export default function SectionActivitiesPage({
               variant="secondary"
               size="sm"
               onClick={() => {
-                setActionSuccess("Section activities saved!");
+                toast.success("Section Saved", "Returning to itinerary builder...");
                 setTimeout(() => {
                   router.push(`/trips/${tripId}/builder`);
                 }, 400);
@@ -313,12 +311,6 @@ export default function SectionActivitiesPage({
         {error && (
           <Alert variant="danger" badgeText="ERROR">
             {error}
-          </Alert>
-        )}
-
-        {actionSuccess && (
-          <Alert variant="success" badgeText="UPDATED">
-            {actionSuccess}
           </Alert>
         )}
 
@@ -538,7 +530,7 @@ export default function SectionActivitiesPage({
             </div>
 
             {/* Return CTA */}
-            <div className="pt-4 route-divider flex justify-start">
+            {/* <div className="pt-4 route-divider flex justify-start">
               <Button
                 variant="outline"
                 size="sm"
@@ -547,7 +539,7 @@ export default function SectionActivitiesPage({
               >
                 Return to Itinerary Builder
               </Button>
-            </div>
+            </div> */}
           </>
         )}
       </main>
