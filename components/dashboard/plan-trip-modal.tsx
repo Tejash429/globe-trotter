@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -14,7 +14,15 @@ import {
   Textarea,
   Alert,
 } from "@/components/ui";
-import { Plus, Calendar, MapPin, DollarSign, Compass } from "lucide-react";
+import { Plus, Calendar, MapPin, DollarSign, Compass, Search, Loader2 } from "lucide-react";
+
+interface CitySearchResult {
+  id: string;
+  name: string;
+  country: string;
+  region?: string;
+  label: string;
+}
 
 interface PlanTripModalProps {
   isOpen: boolean;
@@ -37,9 +45,63 @@ export function PlanTripModal({
     description: "",
   });
 
+  // Autocomplete state
+  const [citySuggestions, setCitySuggestions] = useState<CitySearchResult[]>([]);
+  const [isSearchingCities, setIsSearchingCities] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Fetch live city & state suggestions dynamically from API
+  const fetchCitySuggestions = async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setCitySuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    setIsSearchingCities(true);
+    try {
+      const res = await fetch(`/api/v1/destinations/search?q=${encodeURIComponent(query.trim())}`);
+      const data = await res.json();
+      if (res.ok && data.success && Array.isArray(data.data)) {
+        setCitySuggestions(data.data);
+        setShowDropdown(data.data.length > 0);
+      }
+    } catch (err) {
+      console.warn("City search API error:", err);
+    } finally {
+      setIsSearchingCities(false);
+    }
+  };
+
+  const handleDestinationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setFormData((prev) => ({ ...prev, destinationPlace: val }));
+    fetchCitySuggestions(val);
+  };
+
+  const handleSelectCity = (city: CitySearchResult) => {
+    setFormData((prev) => ({
+      ...prev,
+      destinationPlace: city.name || city.label,
+    }));
+    setShowDropdown(false);
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -57,7 +119,7 @@ export function PlanTripModal({
       return;
     }
     if (!formData.destinationPlace.trim()) {
-      setError("Please specify a destination place or city.");
+      setError("Please specify a valid destination city or state.");
       return;
     }
     if (!formData.startDate || !formData.endDate) {
@@ -189,18 +251,63 @@ export function PlanTripModal({
             />
           </div>
 
-          {/* Destination Place & Budget Target */}
+          {/* Destination Place (Live Autocomplete) & Budget Target */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input
-              id="destinationPlace"
-              name="destinationPlace"
-              label="Destination Place / City"
-              value={formData.destinationPlace}
-              onChange={handleChange}
-              placeholder="e.g. Paris / Jaipur"
-              leftIcon={<MapPin className="w-4 h-4 text-teal-primary/70" />}
-              required
-            />
+            <div className="relative" ref={dropdownRef}>
+              <Input
+                id="destinationPlace"
+                name="destinationPlace"
+                label="Destination City / State"
+                value={formData.destinationPlace}
+                onChange={handleDestinationChange}
+                onFocus={() => {
+                  if (formData.destinationPlace.length >= 2 && citySuggestions.length > 0) {
+                    setShowDropdown(true);
+                  }
+                }}
+                placeholder="e.g. Jaipur, Paris, Tokyo"
+                leftIcon={<MapPin className="w-4 h-4 text-teal-primary/70" />}
+                rightIcon={
+                  isSearchingCities ? (
+                    <Loader2 className="w-4 h-4 text-teal-primary animate-spin" />
+                  ) : undefined
+                }
+                required
+              />
+
+              {/* Dynamic Live Autocomplete Dropdown */}
+              {showDropdown && citySuggestions.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-surface border border-border-muted rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto font-sans text-xs">
+                  <div className="p-1.5 font-mono text-[10px] uppercase font-bold text-muted-foreground bg-paper border-b border-border-muted/60 px-3">
+                    Select Valid City or State:
+                  </div>
+                  {citySuggestions.map((city) => (
+                    <button
+                      key={city.id}
+                      type="button"
+                      onClick={() => handleSelectCity(city)}
+                      className="w-full text-left px-3 py-2 hover:bg-teal-primary/10 hover:text-teal-primary transition-colors flex items-center justify-between group cursor-pointer border-b border-border-muted/30 last:border-0"
+                    >
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-teal-primary/70 group-hover:text-teal-primary shrink-0" />
+                        <span className="font-semibold text-ink group-hover:text-teal-primary">
+                          {city.name}
+                        </span>
+                        {city.region && (
+                          <span className="text-muted-foreground text-[11px]">
+                            ({city.region})
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-mono text-[10px] text-muted-foreground uppercase font-semibold">
+                        {city.country}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <Input
               id="totalBudget"
               name="totalBudget"
@@ -249,4 +356,3 @@ export function PlanTripModal({
     </Dialog>
   );
 }
-
