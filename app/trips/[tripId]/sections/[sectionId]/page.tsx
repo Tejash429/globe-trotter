@@ -21,6 +21,7 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  Save,
 } from "lucide-react";
 import { Navbar } from "@/components/dashboard/navbar";
 import { Button, Card, Badge, Alert, Input, Textarea, Select, Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from "@/components/ui";
@@ -273,14 +274,30 @@ export default function SectionActivitiesPage({
             </span>
           </div>
 
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => handleOpenAddActivity()}
-            leftIcon={<Plus className="w-4 h-4" />}
-          >
-            Add Custom Activity
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setActionSuccess("Section activities saved!");
+                setTimeout(() => {
+                  router.push(`/trips/${tripId}/builder`);
+                }, 400);
+              }}
+              leftIcon={<Save className="w-4 h-4 text-teal-primary" />}
+            >
+              Save & Return to Builder
+            </Button>
+
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => handleOpenAddActivity()}
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              Add Custom Activity
+            </Button>
+          </div>
         </div>
 
         {/* Global Loading / Error / Success Alerts */}
