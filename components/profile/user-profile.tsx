@@ -23,6 +23,7 @@ import { Navbar } from "@/components/dashboard/navbar";
 import { Footer } from "@/components/dashboard/footer";
 import { Badge, Button, Alert, Card, toast } from "@/components/ui";
 import { TripCard } from "@/components/trips/trip-card";
+import { DeleteTripDialog } from "@/components/trips/delete-trip-dialog";
 
 interface TripData {
   id: string;
@@ -263,6 +264,43 @@ export function UserProfile() {
       toast.error("Update Failed", err.message || "Failed to update profile. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const [tripToDelete, setTripToDelete] = useState<TripData | null>(null);
+  const [isDeletingTrip, setIsDeletingTrip] = useState(false);
+
+  const handleConfirmDeleteTrip = async () => {
+    if (!tripToDelete) return;
+
+    let token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token && typeof document !== "undefined") {
+      const match = document.cookie.match(new RegExp("(^| )token=([^;]+)"));
+      if (match) token = match[2];
+    }
+    if (!token) return;
+
+    setIsDeletingTrip(true);
+    try {
+      const res = await fetch(`/api/v1/trips/${tripToDelete.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error?.message || "Failed to delete trip");
+      }
+
+      const deletedTitle = tripToDelete.title;
+      setTrips((prev) => prev.filter((t) => t.id !== tripToDelete.id));
+      setUserData((prev) => (prev ? { ...prev, tripsCount: Math.max(0, prev.tripsCount - 1) } : null));
+      setTripToDelete(null);
+      toast.success("Expedition Removed", `"${deletedTitle}" was successfully removed.`);
+    } catch (err: any) {
+      toast.error("Deletion Failed", err.message || "Failed to delete trip");
+    } finally {
+      setIsDeletingTrip(false);
     }
   };
 
@@ -592,6 +630,8 @@ export function UserProfile() {
                       key={trip.id}
                       trip={trip}
                       viewHref={`/trips/${trip.id}/builder`}
+                      onDelete={() => setTripToDelete(trip)}
+                      isDeleting={isDeletingTrip && tripToDelete?.id === trip.id}
                     />
                   ))}
                 </div>
@@ -626,6 +666,8 @@ export function UserProfile() {
                       key={trip.id}
                       trip={trip}
                       viewHref={`/trips/${trip.id}`}
+                      onDelete={() => setTripToDelete(trip)}
+                      isDeleting={isDeletingTrip && tripToDelete?.id === trip.id}
                     />
                   ))}
                 </div>
@@ -640,6 +682,28 @@ export function UserProfile() {
           </>
         )}
       </main>
+
+      {/* Delete Trip Confirmation Modal */}
+      <DeleteTripDialog
+        isOpen={!!tripToDelete}
+        tripTitle={tripToDelete?.title}
+        destinationPlace={tripToDelete?.destinationPlace}
+        tripDateRange={
+          tripToDelete?.startDate && tripToDelete?.endDate
+            ? `${new Date(tripToDelete.startDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })} – ${new Date(tripToDelete.endDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}`
+            : undefined
+        }
+        onClose={() => setTripToDelete(null)}
+        onConfirm={handleConfirmDeleteTrip}
+        isDeleting={isDeletingTrip}
+      />
 
       {/* Modern Passport Footer */}
       <Footer />

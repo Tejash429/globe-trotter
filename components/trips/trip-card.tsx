@@ -177,10 +177,11 @@ export function TripCard({ trip, onView, onDelete, isDeleting, viewHref }: TripC
                   onDelete();
                 }}
                 disabled={isDeleting}
-                className="p-1 rounded bg-ink/75 backdrop-blur-xs text-white hover:text-brick-danger hover:bg-white transition-colors cursor-pointer border border-white/20"
+                className="p-1.5 rounded-lg bg-ink/80 backdrop-blur-xs text-white hover:text-white hover:bg-brick-danger transition-all duration-200 cursor-pointer border border-white/25 shadow-xs flex items-center justify-center group/del"
                 title="Delete Trip"
+                aria-label="Delete Trip"
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-3.5 h-3.5 group-hover/del:scale-110 transition-transform" />
               </button>
             )}
           </div>

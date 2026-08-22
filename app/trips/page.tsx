@@ -17,6 +17,7 @@ import {
 import { Navbar } from "@/components/dashboard/navbar";
 import { Footer } from "@/components/dashboard/footer";
 import { PlanTripModal } from "@/components/dashboard/plan-trip-modal";
+import { DeleteTripDialog } from "@/components/trips/delete-trip-dialog";
 import { Button, Card, Badge, Alert, toast } from "@/components/ui";
 import { TripCard } from "@/components/trips/trip-card";
 
@@ -45,7 +46,8 @@ export default function MyTripsPage() {
   const [activeTab, setActiveTab] = useState<"ALL" | "UPCOMING" | "CURRENT" | "PAST">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [tripToDelete, setTripToDelete] = useState<TripItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchTrips = async () => {
     let token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -87,10 +89,8 @@ export default function MyTripsPage() {
     fetchTrips();
   }, []);
 
-  const handleDeleteTrip = async (tripId: string, tripTitle: string) => {
-    if (!confirm(`Are you sure you want to delete "${tripTitle}"? This cannot be undone.`)) {
-      return;
-    }
+  const handleConfirmDelete = async () => {
+    if (!tripToDelete) return;
 
     let token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token && typeof document !== "undefined") {
@@ -99,9 +99,9 @@ export default function MyTripsPage() {
     }
     if (!token) return;
 
-    setDeletingId(tripId);
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/v1/trips/${tripId}`, {
+      const res = await fetch(`/api/v1/trips/${tripToDelete.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -111,12 +111,14 @@ export default function MyTripsPage() {
         throw new Error(data.error?.message || "Failed to delete trip");
       }
 
-      setTrips((prev) => prev.filter((t) => t.id !== tripId));
-      toast.success("Expedition Removed", `"${tripTitle}" was successfully removed.`);
+      const deletedTitle = tripToDelete.title;
+      setTrips((prev) => prev.filter((t) => t.id !== tripToDelete.id));
+      setTripToDelete(null);
+      toast.success("Expedition Removed", `"${deletedTitle}" was successfully removed.`);
     } catch (err: any) {
       toast.error("Deletion Failed", err.message || "Failed to delete trip");
     } finally {
-      setDeletingId(null);
+      setIsDeleting(false);
     }
   };
 
@@ -299,7 +301,7 @@ export default function MyTripsPage() {
           </div>
         )}
 
-        {/* Trips Grid List using Reusable TripCard */}
+        {/* Trips Grid List using Reusable TripCard with custom Delete Dialog */}
         {!isLoading && filteredTrips.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTrips.map((trip) => (
@@ -307,8 +309,8 @@ export default function MyTripsPage() {
                 key={trip.id}
                 trip={trip}
                 viewHref={`/trips/${trip.id}/builder`}
-                onDelete={() => handleDeleteTrip(trip.id, trip.title)}
-                isDeleting={deletingId === trip.id}
+                onDelete={() => setTripToDelete(trip)}
+                isDeleting={isDeleting && tripToDelete?.id === trip.id}
               />
             ))}
           </div>
@@ -322,6 +324,28 @@ export default function MyTripsPage() {
           setIsPlanModalOpen(false);
           fetchTrips();
         }}
+      />
+
+      {/* Custom Delete Confirmation Dialog */}
+      <DeleteTripDialog
+        isOpen={!!tripToDelete}
+        tripTitle={tripToDelete?.title}
+        destinationPlace={tripToDelete?.destinationPlace}
+        tripDateRange={
+          tripToDelete?.startDate && tripToDelete?.endDate
+            ? `${new Date(tripToDelete.startDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })} – ${new Date(tripToDelete.endDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}`
+            : undefined
+        }
+        onClose={() => setTripToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
       />
 
       {/* Discreet Workspace Status Strip */}
