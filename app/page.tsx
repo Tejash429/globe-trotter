@@ -12,6 +12,7 @@ import {
   Plane,
   Ticket,
   Map,
+  User,
 } from "lucide-react";
 import { LoginForm } from "@/components/auth/login-form";
 import { RegisterForm } from "@/components/auth/register-form";
@@ -76,6 +77,15 @@ export default function Home() {
               PORT 2026
             </Badge>
 
+            <Link href="/profile">
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<User className="w-3.5 h-3.5" />}
+              >
+                User Profile (Screen 7)
+              </Button>
+            </Link>
             <Button
               variant="outline"
               size="sm"
