@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Compass,
   Plus,
-  Calendar,
+  Calendar as CalendarIcon,
   MapPin,
   Luggage,
   Sparkles,
@@ -72,8 +72,8 @@ export default function MyTripsPage() {
       const tripList = Array.isArray(data.data?.trips)
         ? data.data.trips
         : Array.isArray(data.data)
-        ? data.data
-        : [];
+          ? data.data
+          : [];
       setTrips(tripList);
     } catch (err: any) {
       toast.error("Failed to Load Trips", err.message || "Could not fetch your trips.");
@@ -173,15 +173,25 @@ export default function MyTripsPage() {
             </p>
           </div>
 
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => setIsPlanModalOpen(true)}
-            leftIcon={<Plus className="w-4 h-4 stroke-[2.5]" />}
-            className="shadow-sm font-bold"
-          >
-            Plan New Trip
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link href="/calendar">
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<CalendarIcon className="w-4 h-4 text-teal-primary" />}
+              >
+                Calendar View
+              </Button>
+            </Link>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsPlanModalOpen(true)}
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              Plan New Trip
+            </Button>
+          </div>
         </div>
 
         {/* Filter and Search Bar Controls */}
@@ -193,25 +203,22 @@ export default function MyTripsPage() {
                 { id: "ALL", label: `All Trips (${trips.length})` },
                 {
                   id: "UPCOMING",
-                  label: `Upcoming (${
-                    trips.filter((t) => (t.startDate ? new Date(t.startDate) > now : true)).length
-                  })`,
+                  label: `Upcoming (${trips.filter((t) => (t.startDate ? new Date(t.startDate) > now : true)).length
+                    })`,
                 },
                 {
                   id: "CURRENT",
-                  label: `Ongoing (${
-                    trips.filter((t) =>
-                      t.startDate && t.endDate
-                        ? new Date(t.startDate) <= now && new Date(t.endDate) >= now
-                        : false
-                    ).length
-                  })`,
+                  label: `Ongoing (${trips.filter((t) =>
+                    t.startDate && t.endDate
+                      ? new Date(t.startDate) <= now && new Date(t.endDate) >= now
+                      : false
+                  ).length
+                    })`,
                 },
                 {
                   id: "PAST",
-                  label: `Completed (${
-                    trips.filter((t) => (t.endDate ? new Date(t.endDate) < now : false)).length
-                  })`,
+                  label: `Completed (${trips.filter((t) => (t.endDate ? new Date(t.endDate) < now : false)).length
+                    })`,
                 },
               ] as const
             ).map((tab) => (
@@ -219,11 +226,10 @@ export default function MyTripsPage() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                  activeTab === tab.id
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer whitespace-nowrap ${activeTab === tab.id
                     ? "bg-teal-primary text-white shadow-xs"
                     : "bg-paper text-muted-foreground hover:text-ink border border-border-muted/60"
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
