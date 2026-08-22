@@ -25,6 +25,7 @@ import {
   Clock,
   Layers,
   ArrowRight,
+  Save,
 } from "lucide-react";
 import { Navbar } from "@/components/dashboard/navbar";
 import { Button, Card, Badge, Alert } from "@/components/ui";
@@ -244,6 +245,26 @@ export default function ItineraryBuilderPage({
     });
   };
 
+  const [isSavingItinerary, setIsSavingItinerary] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const handleSaveItinerary = async () => {
+    setIsSavingItinerary(true);
+    setError("");
+    try {
+      await fetchData();
+      setSaveSuccess(true);
+      setActionSuccess("Itinerary Saved Successfully! Redirecting to your trips passport...");
+      setTimeout(() => {
+        router.push("/trips");
+      }, 1000);
+    } catch (err: any) {
+      setError("Failed to save itinerary changes. Please try again.");
+    } finally {
+      setIsSavingItinerary(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-paper text-ink flex flex-col selection:bg-amber-accent/20">
       <Navbar />
@@ -265,7 +286,7 @@ export default function ItineraryBuilderPage({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -274,6 +295,23 @@ export default function ItineraryBuilderPage({
             >
               Preview Full Itinerary
             </Button>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleSaveItinerary}
+              isLoading={isSavingItinerary}
+              leftIcon={
+                saveSuccess ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 animate-bounce" />
+                ) : (
+                  <Save className="w-4 h-4 text-teal-primary" />
+                )
+              }
+            >
+              {saveSuccess ? "Itinerary Saved!" : "Save Itinerary"}
+            </Button>
+
             <Button
               variant="primary"
               size="sm"
