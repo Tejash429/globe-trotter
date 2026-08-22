@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Compass,
   User,
@@ -10,417 +10,621 @@ import {
   Globe,
   Calendar,
   Edit3,
-  CheckCircle2,
   Clock,
   ArrowRight,
   MapPin,
-  ShieldCheck,
-  Plus,
-  Sparkles,
   Camera,
-  LogOut
-} from 'lucide-react';
+  Phone,
+  FileText,
+  Plus,
+  CompassIcon,
+} from "lucide-react";
+import { Navbar } from "@/components/dashboard/navbar";
+import { Badge, Button, Alert, Card } from "@/components/ui";
 
-interface TripItem {
+interface TripData {
   id: string;
-  code: string;
+  userId: string;
   title: string;
-  dateRange: string;
-  stopsCount: number;
-  activitiesCount: number;
-  durationDays: number;
-  status: 'UPCOMING' | 'COMPLETED';
-  coverUrl: string;
-  waypoints: { city: string; duration: string }[];
-  spentBudget: number;
+  destinationPlace: string;
+  description?: string;
+  coverImage?: string | null;
+  startDate: string;
+  endDate: string;
   totalBudget: number;
+  currency?: string;
+  visibility?: string;
+  status?: "upcoming" | "ongoing" | "completed";
+  sectionsCount?: number;
+  totalSectionBudget?: number;
+  totalEstimatedCost?: number;
+  sections?: any[];
 }
 
-const PREPLANNED_TRIPS: TripItem[] = [
-  {
-    id: 'trip-1',
-    code: 'GT-EUR-2026',
-    title: 'Grand European Odyssey',
-    dateRange: 'JUL 01 – JUL 15, 2026',
-    stopsCount: 3,
-    activitiesCount: 16,
-    durationDays: 14,
-    status: 'UPCOMING',
-    coverUrl: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&auto=format&fit=crop&q=80',
-    waypoints: [
-      { city: 'Paris', duration: '4d' },
-      { city: 'Amsterdam', duration: '4d' },
-      { city: 'Rome', duration: '6d' },
-    ],
-    spentBudget: 3100,
-    totalBudget: 3500,
-  },
-  {
-    id: 'trip-2',
-    code: 'GT-JPN-2026',
-    title: 'Tokyo & Kyoto Explorer',
-    dateRange: 'SEP 10 – SEP 22, 2026',
-    stopsCount: 3,
-    activitiesCount: 14,
-    durationDays: 12,
-    status: 'UPCOMING',
-    coverUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop&q=80',
-    waypoints: [
-      { city: 'Tokyo', duration: '6d' },
-      { city: 'Hakone', duration: '2d' },
-      { city: 'Kyoto', duration: '4d' },
-    ],
-    spentBudget: 2800,
-    totalBudget: 3000,
-  },
-  {
-    id: 'trip-3',
-    code: 'GT-CHE-2026',
-    title: 'Swiss Alpine Trail',
-    dateRange: 'DEC 05 – DEC 14, 2026',
-    stopsCount: 3,
-    activitiesCount: 10,
-    durationDays: 9,
-    status: 'UPCOMING',
-    coverUrl: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?w=800&auto=format&fit=crop&q=80',
-    waypoints: [
-      { city: 'Zurich', duration: '2d' },
-      { city: 'Lucerne', duration: '3d' },
-      { city: 'Zermatt', duration: '4d' },
-    ],
-    spentBudget: 4200,
-    totalBudget: 4500,
-  },
-];
-
-const PREVIOUS_TRIPS: TripItem[] = [
-  {
-    id: 'trip-4',
-    code: 'GT-IDN-2026',
-    title: 'Bali Coastal Escape',
-    dateRange: 'JAN 12 – JAN 22, 2026',
-    stopsCount: 3,
-    activitiesCount: 12,
-    durationDays: 10,
-    status: 'COMPLETED',
-    coverUrl: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&auto=format&fit=crop&q=80',
-    waypoints: [
-      { city: 'Seminyak', duration: '3d' },
-      { city: 'Ubud', duration: '4d' },
-      { city: 'Uluwatu', duration: '3d' },
-    ],
-    spentBudget: 1950,
-    totalBudget: 2000,
-  },
-  {
-    id: 'trip-5',
-    code: 'GT-ITA-2025',
-    title: 'Amalfi & Rome Getaway',
-    dateRange: 'MAY 10 – MAY 18, 2025',
-    stopsCount: 3,
-    activitiesCount: 11,
-    durationDays: 8,
-    status: 'COMPLETED',
-    coverUrl: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800&auto=format&fit=crop&q=80',
-    waypoints: [
-      { city: 'Rome', duration: '3d' },
-      { city: 'Positano', duration: '3d' },
-      { city: 'Capri', duration: '2d' },
-    ],
-    spentBudget: 3400,
-    totalBudget: 3400,
-  },
-  {
-    id: 'trip-6',
-    code: 'GT-ISL-2025',
-    title: 'Iceland Ring Road Tour',
-    dateRange: 'SEP 02 – SEP 11, 2025',
-    stopsCount: 3,
-    activitiesCount: 15,
-    durationDays: 9,
-    status: 'COMPLETED',
-    coverUrl: 'https://images.unsplash.com/photo-1504893524553-b855bce32c67?w=800&auto=format&fit=crop&q=80',
-    waypoints: [
-      { city: 'Reykjavik', duration: '2d' },
-      { city: 'Vik', duration: '3d' },
-      { city: 'Akureyri', duration: '4d' },
-    ],
-    spentBudget: 2650,
-    totalBudget: 2800,
-  },
-];
+interface UserProfileData {
+  id: string;
+  name: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  phoneNumber?: string;
+  city?: string;
+  country?: string;
+  additionalInfo?: string;
+  language: string;
+  role: string;
+  avatarUrl?: string;
+  joinedDate: string;
+  tripsCount: number;
+}
 
 export function UserProfile() {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
-  const [user, setUser] = useState({
-    name: 'Alex Morgan',
-    username: 'alex_explorer',
-    email: 'alex.morgan@globetrotter.com',
-    language: 'English (US)',
-    joinedDate: 'March 2024',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+  const [isLoading, setIsLoading] = useState(true);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [userData, setUserData] = useState<UserProfileData | null>(null);
+  const [trips, setTrips] = useState<TripData[]>([]);
+  const [editForm, setEditForm] = useState<UserProfileData>({
+    id: "",
+    name: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phoneNumber: "",
+    city: "",
+    country: "",
+    additionalInfo: "",
+    language: "English (US)",
+    role: "USER",
+    avatarUrl: "",
+    joinedDate: "",
+    tripsCount: 0,
   });
 
-  const [editForm, setEditForm] = useState({ ...user });
+  useEffect(() => {
+    async function loadProfileAndTrips() {
+      setIsLoading(true);
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+      if (!token) {
+        // Fallback: Check local storage for authenticated user
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          try {
+            const parsed = JSON.parse(storedUser);
+            const userObj: UserProfileData = {
+              id: parsed.id || "",
+              name: parsed.name || `${parsed.firstName || ""} ${parsed.lastName || ""}`.trim() || "Traveler",
+              firstName: parsed.firstName || "",
+              lastName: parsed.lastName || "",
+              email: parsed.email || "",
+              phoneNumber: parsed.phoneNumber || "",
+              city: parsed.city || "",
+              country: parsed.country || "",
+              additionalInfo: parsed.additionalInfo || "",
+              language: parsed.language === "es" ? "Spanish (Español)" : parsed.language === "fr" ? "French (Français)" : "English (US)",
+              role: parsed.role || "USER",
+              avatarUrl: parsed.avatarUrl || undefined,
+              joinedDate: parsed.createdAt
+                ? new Date(parsed.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+                : "Recent",
+              tripsCount: parsed._count?.trips || 0,
+            };
+            setUserData(userObj);
+            setEditForm(userObj);
+          } catch {
+            setUserData(null);
+          }
+        } else {
+          setUserData(null);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // 1. Fetch User Profile
+        const userRes = await fetch("/api/v1/auth/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const userDataRes = await userRes.json();
+        if (userRes.ok && userDataRes.success && userDataRes.data) {
+          const u = userDataRes.data;
+          const formattedUser: UserProfileData = {
+            id: u.id,
+            name: u.name || `${u.firstName || ""} ${u.lastName || ""}`.trim() || "Traveler",
+            firstName: u.firstName || "",
+            lastName: u.lastName || "",
+            email: u.email,
+            phoneNumber: u.phoneNumber || "",
+            city: u.city || "",
+            country: u.country || "",
+            additionalInfo: u.additionalInfo || "",
+            language: u.language === "es" ? "Spanish (Español)" : u.language === "fr" ? "French (Français)" : "English (US)",
+            role: u.role || "USER",
+            avatarUrl: u.avatarUrl || undefined,
+            joinedDate: u.createdAt
+              ? new Date(u.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+              : "August 2026",
+            tripsCount: u._count?.trips || 0,
+          };
+
+          setUserData(formattedUser);
+          setEditForm(formattedUser);
+          localStorage.setItem("user", JSON.stringify(u));
+        } else {
+          setUserData(null);
+        }
+
+        // 2. Fetch User Trips
+        const tripsRes = await fetch("/api/v1/trips", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const tripsDataRes = await tripsRes.json();
+        if (tripsRes.ok && tripsDataRes.success && Array.isArray(tripsDataRes.data)) {
+          setTrips(tripsDataRes.data);
+          if (userDataRes?.data?._count) {
+            setUserData((prev) => prev ? { ...prev, tripsCount: tripsDataRes.data.length } : null);
+          }
+        } else {
+          setTrips([]);
+        }
+      } catch (err) {
+        console.error("Failed to load profile data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadProfileAndTrips();
+  }, []);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    setUser({ ...editForm });
+    setUserData({ ...editForm });
+
+    // Update local storage user
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            ...parsed,
+            name: editForm.name,
+            firstName: editForm.firstName,
+            lastName: editForm.lastName,
+            phoneNumber: editForm.phoneNumber,
+            city: editForm.city,
+            country: editForm.country,
+            additionalInfo: editForm.additionalInfo,
+          })
+        );
+      }
+    } catch {
+      // Ignore
+    }
+
     setIsEditing(false);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
   };
+
+  // Segregate trips into upcoming and completed based on dates or status
+  const now = new Date();
+  const upcomingTrips = trips.filter((t) => {
+    if (t.status === "upcoming" || t.status === "ongoing") return true;
+    if (t.status === "completed") return false;
+    return new Date(t.endDate) >= now;
+  });
+
+  const previousTrips = trips.filter((t) => {
+    if (t.status === "completed") return true;
+    if (t.status === "upcoming" || t.status === "ongoing") return false;
+    return new Date(t.endDate) < now;
+  });
 
   return (
     <div className="min-h-screen w-full bg-paper text-ink flex flex-col font-sans selection:bg-amber-accent/20 selection:text-ink">
-      {/* Top Header Navigation */}
-      <header className="w-full bg-surface border-b border-border-muted sticky top-0 z-30 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-teal-primary flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
-              <Compass className="w-5 h-5 stroke-[1.75]" />
-            </div>
-            <div>
-              <span className="font-extrabold font-display text-lg text-ink tracking-tight flex items-center gap-2">
-                GlobeTrotter
-              </span>
-              <span className="block text-[10px] font-mono text-muted-foreground">PERSONALIZED TRAVEL PLANNING</span>
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-3">
-            <div className="stamp-badge hidden sm:inline-flex">
-              <span>USER PROFILE (SCREEN 7)</span>
-            </div>
-            <Link
-              href="/login"
-              className="flex items-center gap-1.5 text-xs font-mono font-semibold text-muted-foreground hover:text-ink px-3 py-1.5 rounded-lg border border-border-muted bg-paper hover:bg-muted transition-colors"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Sign Out</span>
-            </Link>
-          </div>
-        </div>
-      </header>
+      {/* Universal Top Header Navigation */}
+      <Navbar />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
-        
-        {/* Top Section: User Profile Card (Wireframe Top Row) */}
-        <section className="w-full bg-surface border border-border-muted rounded-2xl p-6 sm:p-8 shadow-[0_4px_20px_rgba(27,43,52,0.04)] relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-primary via-amber-accent to-teal-primary" />
+        {/* Loading Skeleton */}
+        {isLoading && <ProfileSkeleton />}
 
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8">
-            
-            {/* Left: Image of the User */}
-            <div className="relative shrink-0 group">
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-dashed border-teal-primary/40 p-1.5 bg-paper shadow-sm transition-all duration-300 group-hover:border-teal-primary">
-                {/* eslint-disable-next-next-line @next/next/no-img-element */}
-                <img
-                  src={user.avatarUrl}
-                  alt={user.name}
-                  className="w-full h-full rounded-full object-cover shadow-inner"
-                />
+        {/* Not Logged In State */}
+        {!isLoading && !userData && (
+          <div className="max-w-md mx-auto py-12">
+            <Card isTicketStub className="p-8 text-center space-y-5">
+              <div className="w-16 h-16 rounded-full bg-teal-primary/10 border-2 border-dashed border-teal-primary/40 flex items-center justify-center mx-auto text-teal-primary">
+                <Compass className="w-8 h-8" />
               </div>
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                className="absolute bottom-1 right-1 bg-amber-accent hover:bg-amber-hover text-white p-2 rounded-full shadow-xs cursor-pointer transition-colors"
-                title="Change Avatar"
-              >
-                <Camera className="w-4 h-4" />
-              </button>
-            </div>
+              <div>
+                <h2 className="font-display text-2xl font-bold text-ink">Passport Locked</h2>
+                <p className="font-sans text-xs text-muted-foreground mt-1">
+                  Please sign in with your credentials to inspect and manage your traveler profile.
+                </p>
+              </div>
+              <div className="pt-2 flex flex-col gap-2.5">
+                <Link href="/login">
+                  <Button variant="primary" size="lg" className="w-full">
+                    Sign In to Passport
+                  </Button>
+                </Link>
+                <Link href="/register">
+                  <Button variant="secondary" size="md" className="w-full">
+                    Create New Account
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          </div>
+        )}
 
-            {/* Right: User Details with appropriate option to edit those information */}
-            <div className="flex-1 text-center md:text-left space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-dashed border-border-muted pb-4">
-                <div>
-                  <div className="flex items-center justify-center md:justify-start gap-2">
-                    <h1 className="text-2xl sm:text-3xl font-extrabold font-display text-ink tracking-tight">
-                      {user.name}
-                    </h1>
-                    <span className="stamp-badge-teal text-[10px]">VERIFIED TRAVELER</span>
+        {/* Authenticated Profile Content */}
+        {!isLoading && userData && (
+          <>
+            {/* Success Alert */}
+            {saveSuccess && (
+              <Alert variant="success" badgeText="PROFILE UPDATED">
+                Your traveler credentials and preferences have been successfully updated.
+              </Alert>
+            )}
+
+            {/* Top Section: User Profile Card */}
+            <section className="w-full bg-surface border border-border-muted rounded-2xl p-6 sm:p-8 shadow-[0_4px_20px_rgba(27,43,52,0.04)] relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-primary via-amber-accent to-teal-primary" />
+
+              <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8">
+                {/* Left: Image of the User */}
+                <div className="relative shrink-0 group">
+                  <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-dashed border-teal-primary/40 p-1.5 bg-paper shadow-xs transition-all duration-300 group-hover:border-teal-primary flex items-center justify-center overflow-hidden">
+                    {userData.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={userData.avatarUrl}
+                        alt={userData.name}
+                        className="w-full h-full rounded-full object-cover shadow-inner"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-teal-primary/10 flex items-center justify-center text-teal-primary font-mono text-xl font-bold uppercase">
+                        {userData.name ? userData.name.slice(0, 2) : <User className="w-8 h-8" />}
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs font-mono text-muted-foreground mt-0.5">
-                    @{user.username} • {user.joinedDate}
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="absolute bottom-1 right-1 bg-amber-accent hover:bg-amber-hover text-white p-2 rounded-full shadow-xs cursor-pointer transition-colors"
+                    title="Change Avatar"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Right: User Details with Option to Edit */}
+                <div className="flex-1 text-center md:text-left space-y-4 w-full">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-dashed border-border-muted pb-4">
+                    <div>
+                      <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
+                        <h1 className="text-2xl sm:text-3xl font-extrabold font-display text-ink tracking-tight">
+                          {userData.name}
+                        </h1>
+                        <Badge variant="teal">VERIFIED TRAVELER</Badge>
+                        <Badge variant="amber">{userData.role}</Badge>
+                      </div>
+                      <p className="text-xs font-mono text-muted-foreground mt-1">
+                        Member since {userData.joinedDate} • {trips.length} Total Expeditions
+                      </p>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditing(!isEditing)}
+                      leftIcon={<Edit3 className="w-3.5 h-3.5 text-teal-primary" />}
+                    >
+                      {isEditing ? "Cancel Editing" : "Edit Profile"}
+                    </Button>
+                  </div>
+
+                  {/* Inline Profile Details Grid or Edit Form */}
+                  {!isEditing ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1 text-left">
+                        <div className="p-3 rounded-xl border border-border-muted bg-paper/60 space-y-1">
+                          <span className="text-[10px] font-mono font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5">
+                            <Mail className="w-3.5 h-3.5 text-teal-primary" /> EMAIL ADDRESS
+                          </span>
+                          <p className="text-xs font-mono text-ink truncate font-medium">
+                            {userData.email}
+                          </p>
+                        </div>
+
+                        <div className="p-3 rounded-xl border border-border-muted bg-paper/60 space-y-1">
+                          <span className="text-[10px] font-mono font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5">
+                            <Phone className="w-3.5 h-3.5 text-teal-primary" /> PHONE
+                          </span>
+                          <p className="text-xs font-mono text-ink truncate font-medium">
+                            {userData.phoneNumber || "Not provided"}
+                          </p>
+                        </div>
+
+                        <div className="p-3 rounded-xl border border-border-muted bg-paper/60 space-y-1">
+                          <span className="text-[10px] font-mono font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-amber-accent" /> BASE LOCATION
+                          </span>
+                          <p className="text-xs font-sans text-ink font-medium">
+                            {userData.city && userData.country
+                              ? `${userData.city}, ${userData.country}`
+                              : userData.city || userData.country || "Not specified"}
+                          </p>
+                        </div>
+
+                        <div className="p-3 rounded-xl border border-border-muted bg-paper/60 space-y-1">
+                          <span className="text-[10px] font-mono font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5">
+                            <Globe className="w-3.5 h-3.5 text-teal-primary" /> LANGUAGE
+                          </span>
+                          <p className="text-xs font-sans text-ink font-medium">
+                            {userData.language}
+                          </p>
+                        </div>
+                      </div>
+
+                      {userData.additionalInfo && (
+                        <div className="p-3.5 rounded-xl border border-border-muted bg-paper/40 text-left">
+                          <span className="text-[10px] font-mono font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5 mb-1">
+                            <FileText className="w-3.5 h-3.5 text-teal-primary" /> TRAVEL STYLE & BIO
+                          </span>
+                          <p className="text-xs font-sans text-ink leading-relaxed">
+                            {userData.additionalInfo}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Editable Form */
+                    <form
+                      onSubmit={handleSaveProfile}
+                      className="space-y-4 pt-2 text-left animate-in fade-in"
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-mono font-bold text-ink uppercase">
+                            First Name
+                          </label>
+                          <input
+                            type="text"
+                            value={editForm.firstName}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                firstName: e.target.value,
+                                name: `${e.target.value} ${editForm.lastName || ""}`.trim(),
+                              })
+                            }
+                            className="w-full px-3.5 py-2 rounded-xl border border-border-muted bg-paper text-ink text-xs focus:ring-2 focus:ring-teal-primary/40 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-mono font-bold text-ink uppercase">
+                            Last Name
+                          </label>
+                          <input
+                            type="text"
+                            value={editForm.lastName}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                lastName: e.target.value,
+                                name: `${editForm.firstName || ""} ${e.target.value}`.trim(),
+                              })
+                            }
+                            className="w-full px-3.5 py-2 rounded-xl border border-border-muted bg-paper text-ink text-xs focus:ring-2 focus:ring-teal-primary/40 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-mono font-bold text-ink uppercase">
+                            Email Address
+                          </label>
+                          <input
+                            type="email"
+                            value={editForm.email}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, email: e.target.value })
+                            }
+                            className="w-full px-3.5 py-2 rounded-xl border border-border-muted bg-paper text-ink text-xs font-mono focus:ring-2 focus:ring-teal-primary/40 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-mono font-bold text-ink uppercase">
+                            Phone Number
+                          </label>
+                          <input
+                            type="tel"
+                            value={editForm.phoneNumber}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, phoneNumber: e.target.value })
+                            }
+                            className="w-full px-3.5 py-2 rounded-xl border border-border-muted bg-paper text-ink text-xs font-mono focus:ring-2 focus:ring-teal-primary/40 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-mono font-bold text-ink uppercase">
+                            City
+                          </label>
+                          <input
+                            type="text"
+                            value={editForm.city}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, city: e.target.value })
+                            }
+                            className="w-full px-3.5 py-2 rounded-xl border border-border-muted bg-paper text-ink text-xs focus:ring-2 focus:ring-teal-primary/40 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-mono font-bold text-ink uppercase">
+                            Country
+                          </label>
+                          <input
+                            type="text"
+                            value={editForm.country}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, country: e.target.value })
+                            }
+                            className="w-full px-3.5 py-2 rounded-xl border border-border-muted bg-paper text-ink text-xs focus:ring-2 focus:ring-teal-primary/40 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="text-xs font-mono font-bold text-ink uppercase">
+                            Additional Bio & Preferences
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={editForm.additionalInfo}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, additionalInfo: e.target.value })
+                            }
+                            className="w-full px-3.5 py-2 rounded-xl border border-border-muted bg-paper text-ink text-xs focus:ring-2 focus:ring-teal-primary/40 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-3 pt-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setIsEditing(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" variant="primary" size="sm">
+                          Save Changes
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* Section 2: Preplanned Trips (Dynamic from /api/v1/trips) */}
+            <section className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-dashed border-border-muted pb-3">
+                <div>
+                  <h2 className="text-2xl font-extrabold font-display text-ink tracking-tight">
+                    Preplanned Trips
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Upcoming scheduled multi-city itineraries
                   </p>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-border-muted bg-paper hover:bg-muted text-ink font-semibold text-xs transition-colors cursor-pointer self-center md:self-auto"
-                >
-                  <Edit3 className="w-3.5 h-3.5 text-teal-primary" />
-                  <span>{isEditing ? 'Cancel Editing' : 'Edit Profile'}</span>
-                </button>
+                <Badge variant="teal">
+                  {upcomingTrips.length} UPCOMING EXPEDITIONS
+                </Badge>
               </div>
 
-              {/* Inline Profile Details Grid or Edit Form */}
-              {!isEditing ? (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1 text-left">
-                  <div className="p-3.5 rounded-xl border border-border-muted bg-paper/60 space-y-1">
-                    <span className="text-[10px] font-mono font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5 text-teal-primary" /> EMAIL ADDRESS
-                    </span>
-                    <p className="text-xs font-mono text-ink truncate font-medium">{user.email}</p>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl border border-border-muted bg-paper/60 space-y-1">
-                    <span className="text-[10px] font-mono font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5 text-amber-accent" /> PREFERRED LANGUAGE
-                    </span>
-                    <p className="text-xs font-sans text-ink font-medium">{user.language}</p>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl border border-border-muted bg-paper/60 space-y-1">
-                    <span className="text-[10px] font-mono font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-teal-primary" /> PASSPORT CLEARANCE
-                    </span>
-                    <p className="text-xs font-mono text-teal-primary font-bold">CLEARANCE #GT-2026</p>
-                  </div>
+              {upcomingTrips.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {upcomingTrips.map((trip) => (
+                    <LiveTripCard key={trip.id} trip={trip} />
+                  ))}
                 </div>
               ) : (
-                /* Editable Form */
-                <form onSubmit={handleSaveProfile} className="space-y-4 pt-2 text-left animate-in fade-in">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-mono font-bold text-ink uppercase">Full Name</label>
-                      <input
-                        type="text"
-                        value={editForm.name}
-                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                        className="w-full px-3.5 py-2 rounded-xl border border-border-muted bg-paper text-ink text-xs focus:ring-2 focus:ring-teal-primary/40 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-mono font-bold text-ink uppercase">Username</label>
-                      <input
-                        type="text"
-                        value={editForm.username}
-                        onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
-                        className="w-full px-3.5 py-2 rounded-xl border border-border-muted bg-paper text-ink text-xs font-mono focus:ring-2 focus:ring-teal-primary/40 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-mono font-bold text-ink uppercase">Email Address</label>
-                      <input
-                        type="email"
-                        value={editForm.email}
-                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                        className="w-full px-3.5 py-2 rounded-xl border border-border-muted bg-paper text-ink text-xs font-mono focus:ring-2 focus:ring-teal-primary/40 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-mono font-bold text-ink uppercase">Language</label>
-                      <select
-                        value={editForm.language}
-                        onChange={(e) => setEditForm({ ...editForm, language: e.target.value })}
-                        className="w-full px-3.5 py-2 rounded-xl border border-border-muted bg-paper text-ink text-xs focus:ring-2 focus:ring-teal-primary/40 focus:outline-none"
-                      >
-                        <option>English (US)</option>
-                        <option>Spanish (Español)</option>
-                        <option>French (Français)</option>
-                        <option>German (Deutsch)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsEditing(false)}
-                      className="px-4 py-2 rounded-xl border border-border-muted bg-paper text-xs font-semibold text-muted-foreground hover:text-ink cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-5 py-2 rounded-xl bg-teal-primary hover:bg-teal-hover text-white text-xs font-bold cursor-pointer transition-colors shadow-xs"
-                    >
-                      Save Changes
-                    </button>
-                  </div>
-                </form>
+                <EmptyTripsState
+                  title="No Upcoming Expeditions"
+                  description="You don't have any upcoming trips scheduled. Start exploring cities or map your next journey."
+                />
               )}
+            </section>
 
-            </div>
-          </div>
-        </section>
+            {/* Section 3: Previous Trips (Dynamic from /api/v1/trips) */}
+            <section className="space-y-4 pt-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-dashed border-border-muted pb-3">
+                <div>
+                  <h2 className="text-2xl font-extrabold font-display text-ink tracking-tight">
+                    Previous Trips
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Completed travel logs &amp; archived itineraries
+                  </p>
+                </div>
+                <Badge variant="amber">
+                  {previousTrips.length} COMPLETED EXPEDITIONS
+                </Badge>
+              </div>
 
-        {/* Section 2: Preplanned Trips (Wireframe Middle Section) */}
-        <section className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-dashed border-border-muted pb-3">
-            <div>
-              <h2 className="text-2xl font-extrabold font-heading text-ink tracking-tight">
-                Preplanned Trips
-              </h2>
-              <p className="text-xs text-muted-foreground">Upcoming scheduled multi-city itineraries</p>
-            </div>
-            <div className="stamp-badge-teal self-start sm:self-auto">
-              <span>{PREPLANNED_TRIPS.length} UPCOMING EXPEDITIONS</span>
-            </div>
-          </div>
-
-          {/* Grid of Trip Cards matching Image 2 EXACTLY */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {PREPLANNED_TRIPS.map((trip) => (
-              <TripCard key={trip.id} trip={trip} />
-            ))}
-          </div>
-        </section>
-
-        {/* Section 3: Previous Trips (Wireframe Bottom Section) */}
-        <section className="space-y-4 pt-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-dashed border-border-muted pb-3">
-            <div>
-              <h2 className="text-2xl font-extrabold font-heading text-ink tracking-tight">
-                Previous Trips
-              </h2>
-              <p className="text-xs text-muted-foreground">Completed travel logs &amp; archived itineraries</p>
-            </div>
-            <div className="stamp-badge self-start sm:self-auto">
-              <span>{PREVIOUS_TRIPS.length} COMPLETED EXPEDITIONS</span>
-            </div>
-          </div>
-
-          {/* Grid of Trip Cards matching Image 2 EXACTLY */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {PREVIOUS_TRIPS.map((trip) => (
-              <TripCard key={trip.id} trip={trip} />
-            ))}
-          </div>
-        </section>
-
+              {previousTrips.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {previousTrips.map((trip) => (
+                    <LiveTripCard key={trip.id} trip={trip} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyTripsState
+                  title="No Archived Trips"
+                  description="Completed expeditions and travel logs will appear here after your journeys conclude."
+                  showCreateButton={false}
+                />
+              )}
+            </section>
+          </>
+        )}
       </main>
     </div>
   );
 }
 
 /**
- * Trip Card Component — Recreating Card Reference Image 2 EXACTLY:
- * - Cover Image with Dark Gradient
- * - Code Tag Badge (GT-EUR-2026) + Status Badge (UPCOMING)
- * - Date Range overlay (JUL 01 – JUL 15, 2026)
- * - Title in Fraunces serif (Grand European Odyssey)
- * - Subtitle (3 Destination Stops • 16 Activities)
- * - Waypoints Card Box (PLANNED WAYPOINTS: Paris, Amsterdam, Rome)
- * - Budget Progress Bar ($3,100 / $3,500)
- * - Footer with Duration (14 Days Duration) and View Itinerary CTA button
+ * Dynamic Trip Card Component built from live backend trip data
  */
-function TripCard({ trip }: { trip: TripItem }) {
-  const budgetPercentage = Math.min(Math.round((trip.spentBudget / trip.totalBudget) * 100), 100);
+function LiveTripCard({ trip }: { trip: TripData }) {
+  const startDateStr = trip.startDate
+    ? new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+    : "";
+  const endDateStr = trip.endDate
+    ? new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+    : "";
+  const dateRange = startDateStr && endDateStr ? `${startDateStr.toUpperCase()} – ${endDateStr.toUpperCase()}` : startDateStr;
+
+  const totalDays = trip.startDate && trip.endDate
+    ? Math.max(1, Math.round((new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / (1000 * 60 * 60 * 24)))
+    : 1;
+
+  const totalBudget = trip.totalBudget || 0;
+  const spentBudget = trip.totalSectionBudget || trip.totalEstimatedCost || 0;
+  const budgetPercentage = totalBudget > 0 ? Math.min(Math.round((spentBudget / totalBudget) * 100), 100) : 0;
+  const isCompleted = trip.status === "completed" || new Date(trip.endDate) < new Date();
+
+  const coverUrl =
+    trip.coverImage ||
+    "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&auto=format&fit=crop&q=80";
 
   return (
     <div className="bg-surface border border-border-muted rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(27,43,52,0.04)] hover:shadow-md transition-all duration-300 flex flex-col group">
-      
       {/* Cover Image Header */}
       <div className="relative h-48 w-full overflow-hidden bg-slate-900">
-        {/* eslint-disable-next-next-line @next/next/no-img-element */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={trip.coverUrl}
+          src={coverUrl}
           alt={trip.title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
@@ -429,67 +633,58 @@ function TripCard({ trip }: { trip: TripItem }) {
         {/* Top Badges */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
           <span className="px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md text-white font-mono text-[11px] font-bold tracking-wider border border-white/10 shadow-xs">
-            {trip.code}
+            {trip.destinationPlace?.toUpperCase() || "EXPEDITION"}
           </span>
           <span
-            className={`stamp-badge text-[10px] backdrop-blur-md shadow-xs ${
-              trip.status === 'UPCOMING'
-                ? 'stamp-badge-teal bg-emerald-950/70 border-emerald-500/50 text-emerald-300'
-                : 'bg-slate-900/80 border-slate-700 text-slate-300'
+            className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-semibold flex items-center gap-1 border shadow-xs ${
+              !isCompleted
+                ? "bg-teal-primary/90 text-white border-teal-primary"
+                : "bg-amber-accent/90 text-white border-amber-accent"
             }`}
           >
             <Clock className="w-3 h-3" />
-            <span>{trip.status}</span>
+            <span>{!isCompleted ? "UPCOMING" : "COMPLETED"}</span>
           </span>
         </div>
 
         {/* Bottom Date Overlay */}
         <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white font-mono text-xs font-semibold drop-shadow-md">
           <Calendar className="w-3.5 h-3.5 text-amber-accent" />
-          <span>{trip.dateRange}</span>
+          <span>{dateRange}</span>
         </div>
       </div>
 
-      {/* Card Content Body */}
+      {/* Body Content */}
       <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-        
-        {/* Title & Subtitle */}
         <div>
-          <h3 className="text-xl font-bold font-display text-teal-primary tracking-tight group-hover:text-teal-hover transition-colors">
+          <h3 className="font-display text-lg font-bold text-ink group-hover:text-teal-primary transition-colors">
             {trip.title}
           </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {trip.stopsCount} Destination Stops • {trip.activitiesCount} Activities
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+            {trip.description || `Journey to ${trip.destinationPlace} spanning ${totalDays} days.`}
           </p>
-        </div>
 
-        {/* Planned Waypoints Box */}
-        <div className="p-3.5 rounded-xl border border-border-muted bg-paper/80 space-y-2">
-          <span className="text-[10px] font-mono font-bold tracking-wider text-muted-foreground uppercase block">
-            PLANNED WAYPOINTS:
-          </span>
-          <ul className="space-y-1 text-xs font-sans text-ink">
-            {trip.waypoints.map((wp, i) => (
-              <li key={i} className="flex items-center gap-2 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-teal-primary" />
-                <span>{wp.city}</span>
-                <span className="text-muted-foreground font-mono text-[11px]">({wp.duration})</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Budget Bar */}
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-mono text-muted-foreground flex items-center gap-1">
-              <span className="text-teal-primary font-bold">$</span> Budget:
+          {/* Destination tag */}
+          <div className="mt-3 p-2.5 rounded-xl bg-paper border border-border-muted/70 flex items-center justify-between">
+            <span className="text-[11px] font-mono text-ink flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-teal-primary" />
+              <span className="font-semibold">{trip.destinationPlace}</span>
             </span>
-            <span className="font-mono font-bold text-ink">
-              ${trip.spentBudget.toLocaleString()} / ${trip.totalBudget.toLocaleString()}
+            <span className="text-[10px] font-mono text-muted-foreground">
+              {trip.sectionsCount ?? (trip.sections?.length || 0)} Sections
             </span>
           </div>
-          <div className="h-2 w-full bg-paper border border-border-muted rounded-full overflow-hidden">
+        </div>
+
+        {/* Budget Progress Bar */}
+        <div className="space-y-1.5 border-t border-dashed border-border-muted pt-3">
+          <div className="flex justify-between text-xs font-mono">
+            <span className="text-muted-foreground">Allocated Budget:</span>
+            <span className="font-bold text-ink">
+              ${spentBudget.toLocaleString()} / ${totalBudget.toLocaleString()} {trip.currency || "USD"}
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-paper rounded-full overflow-hidden border border-border-muted/50">
             <div
               className="h-full bg-teal-primary rounded-full transition-all duration-500"
               style={{ width: `${budgetPercentage}%` }}
@@ -497,22 +692,119 @@ function TripCard({ trip }: { trip: TripItem }) {
           </div>
         </div>
 
-        {/* Card Footer: Duration & CTA */}
-        <div className="pt-3 border-t border-border-muted flex items-center justify-between text-xs">
-          <span className="font-mono text-muted-foreground font-medium">
-            {trip.durationDays} Days Duration
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-1">
+          <span className="text-xs font-mono text-muted-foreground">
+            {totalDays} {totalDays === 1 ? "Day" : "Days"} Duration
           </span>
-          <button
-            type="button"
-            className="py-2 px-3.5 rounded-xl bg-teal-primary hover:bg-teal-hover text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <span>View Itinerary</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          <Link href="/dashboard">
+            <Button variant="outline" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+              View Details
+            </Button>
+          </Link>
         </div>
+      </div>
+    </div>
+  );
+}
 
+/**
+ * Empty Trips State Component
+ */
+function EmptyTripsState({
+  title,
+  description,
+  showCreateButton = true,
+}: {
+  title: string;
+  description: string;
+  showCreateButton?: boolean;
+}) {
+  return (
+    <div className="p-8 rounded-2xl border border-dashed border-border-muted bg-surface text-center space-y-3">
+      <div className="w-12 h-12 rounded-full bg-paper border border-border-muted flex items-center justify-center mx-auto text-muted-foreground">
+        <CompassIcon className="w-6 h-6 text-teal-primary/70" />
+      </div>
+      <div>
+        <h3 className="font-display text-base font-bold text-ink">{title}</h3>
+        <p className="font-sans text-xs text-muted-foreground max-w-md mx-auto mt-1">
+          {description}
+        </p>
+      </div>
+      {showCreateButton && (
+        <div className="pt-2">
+          <Link href="/dashboard">
+            <Button variant="primary" size="sm" leftIcon={<Plus className="w-3.5 h-3.5" />}>
+              Plan a New Trip
+            </Button>
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Shimmering Passport Loading Skeleton Component
+ */
+function ProfileSkeleton() {
+  return (
+    <div className="space-y-10 animate-pulse">
+      {/* Top Profile Card Skeleton */}
+      <div className="w-full bg-surface border border-border-muted rounded-2xl p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8">
+          {/* Avatar Skeleton */}
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-paper border-2 border-dashed border-border-muted/80 p-2 shrink-0">
+            <div className="w-full h-full rounded-full bg-border-muted/50" />
+          </div>
+
+          {/* User Meta Skeleton */}
+          <div className="flex-1 space-y-4 w-full">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-dashed border-border-muted pb-4">
+              <div className="space-y-2">
+                <div className="h-8 w-56 bg-border-muted/60 rounded-lg" />
+                <div className="h-4 w-40 bg-border-muted/40 rounded" />
+              </div>
+              <div className="h-9 w-28 bg-border-muted/40 rounded-xl" />
+            </div>
+
+            {/* 4 Details Boxes Skeleton */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="p-3.5 rounded-xl border border-border-muted bg-paper/60 space-y-2">
+                  <div className="h-3 w-20 bg-border-muted/50 rounded" />
+                  <div className="h-4 w-32 bg-border-muted/70 rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Trips Section Skeleton */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center border-b border-dashed border-border-muted pb-3">
+          <div className="space-y-1.5">
+            <div className="h-6 w-44 bg-border-muted/60 rounded" />
+            <div className="h-3 w-60 bg-border-muted/30 rounded" />
+          </div>
+          <div className="h-6 w-32 bg-border-muted/40 rounded-full" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-surface border border-border-muted rounded-2xl overflow-hidden space-y-4">
+              <div className="h-48 w-full bg-border-muted/50" />
+              <div className="p-5 space-y-3">
+                <div className="h-5 w-48 bg-border-muted/60 rounded" />
+                <div className="h-3.5 w-32 bg-border-muted/40 rounded" />
+                <div className="h-16 w-full bg-paper rounded-xl border border-border-muted/40" />
+                <div className="h-2 w-full bg-border-muted/30 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
