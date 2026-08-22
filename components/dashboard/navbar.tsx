@@ -103,15 +103,6 @@ export function Navbar({ onOpenPlanModal }: NavbarProps) {
             {user?.name ? `${user.name.split(" ")[0].toUpperCase()} #2026` : "PASS #2026"}
           </Badge>
 
-          <button
-            type="button"
-            className="p-2 text-muted-foreground hover:text-ink rounded-full hover:bg-paper transition-colors relative cursor-pointer"
-            aria-label="Notifications"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-accent ring-2 ring-surface" />
-          </button>
-
           {/* User Photo Avatar Circle with Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button

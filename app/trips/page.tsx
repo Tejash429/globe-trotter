@@ -15,6 +15,7 @@ import {
   Search,
 } from "lucide-react";
 import { Navbar } from "@/components/dashboard/navbar";
+import { Footer } from "@/components/dashboard/footer";
 import { PlanTripModal } from "@/components/dashboard/plan-trip-modal";
 import { Button, Card, Badge, Alert, toast } from "@/components/ui";
 import { TripCard } from "@/components/trips/trip-card";
@@ -322,6 +323,9 @@ export default function MyTripsPage() {
           fetchTrips();
         }}
       />
+
+      {/* Discreet Workspace Status Strip */}
+      <Footer />
     </div>
   );
 }

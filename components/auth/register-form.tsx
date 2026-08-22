@@ -143,7 +143,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
       <div className="flex items-center justify-between pb-4 mb-6 route-divider">
         <div>
           <h2 className="font-display text-2xl font-bold text-ink leading-tight">
-            Registration Screen
+            Registration
           </h2>
           <p className="font-sans text-xs text-muted-foreground">
             Create your GlobeTrotter passport & traveler profile

@@ -20,6 +20,7 @@ import {
   CompassIcon,
 } from "lucide-react";
 import { Navbar } from "@/components/dashboard/navbar";
+import { Footer } from "@/components/dashboard/footer";
 import { Badge, Button, Alert, Card, toast } from "@/components/ui";
 import { TripCard } from "@/components/trips/trip-card";
 
@@ -639,6 +640,9 @@ export function UserProfile() {
           </>
         )}
       </main>
+
+      {/* Modern Passport Footer */}
+      <Footer />
     </div>
   );
 }

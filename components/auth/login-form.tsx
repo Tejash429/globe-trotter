@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, Eye, EyeOff, Compass, ArrowRight, ShieldCheck } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Compass, ArrowRight, ShieldCheck, Ticket } from "lucide-react";
 import { Button, Input, Card, Badge, toast } from "@/components/ui";
 
 interface LoginFormProps {
@@ -54,7 +54,7 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
 
       if (data.data?.token) {
         localStorage.setItem("token", data.data.token);
-        // Set cookie for middleware route protection
+        // Set cookie for middleware route protection (7 days)
         document.cookie = `token=${data.data.token}; path=/; max-age=604800; SameSite=Lax`;
         if (data.data.user) {
           localStorage.setItem("user", JSON.stringify(data.data.user));
@@ -70,7 +70,7 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
         const urlParams = new URLSearchParams(window.location.search);
         const redirectUrl = urlParams.get("redirect") || "/dashboard";
         router.push(redirectUrl);
-      }, 700);
+      }, 600);
     } catch (err: any) {
       toast.error("Connection Error", err.message || "Failed to contact server. Please try again.");
     } finally {
@@ -79,147 +79,143 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
   };
 
   return (
-    <Card isTicketStub className="w-full max-w-md mx-auto p-6 sm:p-8">
-      {/* Stamp Header */}
-      <div className="flex items-center justify-between pb-4 mb-6 route-divider">
-        <div>
-          <h2 className="font-display text-2xl font-bold text-ink leading-tight">
-            Sign In
-          </h2>
-          <p className="font-sans text-xs text-muted-foreground">
-            Access your personalized travel itineraries
-          </p>
-        </div>
-      </div>
-
-      {/* Screen 1 Circle Photo / Logo Avatar */}
-      <div className="flex flex-col items-center mb-6">
-        <div className="relative group">
-          <div className="w-24 h-24 rounded-full bg-paper border-2 border-dashed border-teal-primary/40 flex items-center justify-center p-1 shadow-inner transition-transform group-hover:scale-105">
-            <div className="w-full h-full rounded-full bg-teal-primary/10 flex flex-col items-center justify-center text-teal-primary overflow-hidden">
-              <Compass className="w-10 h-10 animate-spin-slow" />
-              <span className="font-mono text-[9px] uppercase tracking-wider font-semibold mt-1">
-                GLOBE
-              </span>
+    <div className="w-full max-w-[420px] mx-auto">
+      <Card isTicketStub className="p-6 sm:p-7 shadow-xl border-border-muted/90 bg-surface backdrop-blur-md space-y-4">
+        {/* Ticket Header Stamp */}
+        <div className="flex items-center justify-between route-divider pb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-teal-primary/10 border border-teal-primary/30 flex items-center justify-center text-teal-primary">
+              <Compass className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="font-display text-xl font-bold text-ink leading-tight">
+                Passport Sign In
+              </h2>
+              <p className="font-sans text-[11px] text-muted-foreground">
+                Enter credentials to unlock itineraries
+              </p>
             </div>
           </div>
-          <div className="absolute -bottom-1 -right-1 bg-amber-accent text-white p-1 rounded-full shadow border-2 border-surface">
-            <ShieldCheck className="w-3.5 h-3.5" />
-          </div>
+          <Badge variant="teal" icon={<Ticket className="w-3 h-3" />}>
+            GT-AUTH
+          </Badge>
         </div>
-        <span className="font-mono text-xs text-muted-foreground mt-2 tracking-wide uppercase">
-          Passport Clearance
-        </span>
-      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Email Field */}
-        <Input
-          id="login-email"
-          label="Email Address"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="e.g. traveler@globetrotter.io"
-          leftIcon={<Mail className="w-4 h-4 text-teal-primary/70" />}
-          required
-        />
-
-        {/* Password Field */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <label
-              htmlFor="login-password"
-              className="block font-sans text-xs font-semibold text-ink uppercase tracking-wider"
-            >
-              Password
-            </label>
-            <Link
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                toast.info("Password Reset", "Password reset instructions will be sent to your registered email.");
-              }}
-              className="font-sans text-xs text-teal-primary hover:text-teal-hover hover:underline transition-colors"
-            >
-              Forgot Password?
-            </Link>
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          {/* Email Field */}
           <Input
-            id="login-password"
-            type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••••••"
-            leftIcon={<Lock className="w-4 h-4 text-teal-primary/70" />}
+            id="login-email"
+            label="Email Address"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="traveler@globetrotter.io"
+            leftIcon={<Mail className="w-4 h-4 text-teal-primary/70" />}
             required
-            rightIcon={
+            className="text-xs"
+          />
+
+          {/* Password Field */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="login-password"
+                className="block font-sans text-xs font-semibold text-ink uppercase tracking-wider"
+              >
+                Password
+              </label>
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="text-muted-foreground hover:text-ink transition-colors cursor-pointer"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => {
+                  toast.info(
+                    "Password Reset",
+                    "Password recovery link will be dispatched to your registered email address."
+                  );
+                }}
+                className="font-sans text-[11px] text-teal-primary hover:text-teal-hover hover:underline cursor-pointer"
               >
-                {showPassword ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
+                Forgot Password?
               </button>
-            }
-          />
-        </div>
-
-        {/* Remember Me Checkbox */}
-        <div className="flex items-center justify-between pt-1">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 rounded border-border-muted text-teal-primary focus:ring-teal-primary/30 accent-[#2F6F5E]"
+            </div>
+            <Input
+              id="login-password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••••••"
+              leftIcon={<Lock className="w-4 h-4 text-teal-primary/70" />}
+              required
+              className="text-xs"
+              rightIcon={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-muted-foreground hover:text-ink transition-colors cursor-pointer"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              }
             />
-            <span className="font-sans text-xs text-muted-foreground">
-              Remember my session
-            </span>
-          </label>
+          </div>
+
+          {/* Remember Me */}
+          <div className="flex items-center justify-between pt-0.5">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-border-muted text-teal-primary focus:ring-teal-primary/30 accent-[#2F6F5E]"
+              />
+              <span className="font-sans text-xs text-muted-foreground">
+                Keep session authenticated
+              </span>
+            </label>
+          </div>
+
+          {/* Login Submit Button */}
+          <Button
+            type="submit"
+            variant="primary"
+            size="md"
+            isLoading={isLoading}
+            rightIcon={<ArrowRight className="w-4 h-4" />}
+            className="w-full font-bold shadow-md mt-1"
+          >
+            Sign In to Passport
+          </Button>
+        </form>
+
+        {/* Create Account Footer */}
+        <div className="pt-2.5 border-t border-border-muted flex items-center justify-between text-xs">
+          <span className="text-muted-foreground font-mono text-[11px]">
+            New traveler?
+          </span>
+          {onSwitchToRegister ? (
+            <button
+              type="button"
+              onClick={onSwitchToRegister}
+              className="font-sans font-bold text-amber-accent hover:underline cursor-pointer flex items-center gap-1"
+            >
+              <span>Create Account</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <Link
+              href="/register"
+              className="font-sans font-bold text-amber-accent hover:underline flex items-center gap-1"
+            >
+              <span>Create Account</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          )}
         </div>
-
-        {/* Login Button */}
-        <Button
-          type="submit"
-          variant="primary"
-          size="lg"
-          isLoading={isLoading}
-          rightIcon={<ArrowRight className="w-4 h-4" />}
-          className="w-full mt-2"
-        >
-          Sign In to Passport
-        </Button>
-      </form>
-
-      {/* Dashed Footer */}
-      <div className="mt-6 pt-4 route-divider flex items-center justify-between">
-        <span className="font-mono text-[11px] text-muted-foreground uppercase">
-          New Traveler?
-        </span>
-        {onSwitchToRegister ? (
-          <button
-            type="button"
-            onClick={onSwitchToRegister}
-            className="font-sans text-xs font-semibold text-amber-accent hover:underline cursor-pointer"
-          >
-            Create Account &rarr;
-          </button>
-        ) : (
-          <Link
-            href="/register"
-            className="font-sans text-xs font-semibold text-amber-accent hover:underline"
-          >
-            Create Account &rarr;
-          </Link>
-        )}
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
