@@ -28,7 +28,7 @@ import {
   Save,
 } from "lucide-react";
 import { Navbar } from "@/components/dashboard/navbar";
-import { Button, Card, Badge, Alert } from "@/components/ui";
+import { Button, Card, Badge, Alert, ConfirmDeleteModal, toast } from "@/components/ui";
 import { AddSectionModal, SectionData } from "@/components/itinerary/add-section-modal";
 
 interface TripDetails {
@@ -78,6 +78,11 @@ export default function ItineraryBuilderPage({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<SectionData | null>(null);
   const [actionSuccess, setActionSuccess] = useState("");
+
+  // Delete Section Modal State
+  const [deletingSectionId, setDeletingSectionId] = useState<string | null>(null);
+  const [deletingSectionTitle, setDeletingSectionTitle] = useState<string>("");
+  const [isDeletingSection, setIsDeletingSection] = useState(false);
 
   // Fetch Trip and Sections data
   const fetchData = async () => {
@@ -129,21 +134,27 @@ export default function ItineraryBuilderPage({
 
   // Section Save Callback
   const handleSectionSaved = () => {
-    setActionSuccess("Itinerary stop updated successfully!");
+    // setActionSuccess("Itinerary stop updated successfully!");
     fetchData();
     setTimeout(() => setActionSuccess(""), 3000);
   };
 
-  // Delete Section
-  const handleDeleteSection = async (e: React.MouseEvent, sectionId: string) => {
+  // Delete Section Prompt
+  const handlePromptDeleteSection = (e: React.MouseEvent, section: ItinerarySection) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this itinerary stop?")) return;
+    setDeletingSectionId(section.id);
+    setDeletingSectionTitle(section.title);
+  };
+
+  const handleConfirmDeleteSection = async () => {
+    if (!deletingSectionId) return;
+    setIsDeletingSection(true);
 
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token) return;
 
     try {
-      const res = await fetch(`/api/v1/trips/${tripId}/sections/${sectionId}`, {
+      const res = await fetch(`/api/v1/trips/${tripId}/sections/${deletingSectionId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -153,11 +164,13 @@ export default function ItineraryBuilderPage({
         throw new Error(data.error?.message || "Failed to delete section");
       }
 
-      setActionSuccess("Stop removed from itinerary.");
+      toast.info("Stop Removed", `Itinerary stop "${deletingSectionTitle}" has been removed.`);
+      setDeletingSectionId(null);
       fetchData();
-      setTimeout(() => setActionSuccess(""), 3000);
     } catch (err: any) {
-      alert(err.message || "Failed to delete section");
+      toast.error("Error Deleting Stop", err.message || "Failed to delete section");
+    } finally {
+      setIsDeletingSection(false);
     }
   };
 
@@ -327,14 +340,7 @@ export default function ItineraryBuilderPage({
         </div>
 
         {/* Global Loading / Error Notifications */}
-        {isLoading && (
-          <div className="p-12 text-center space-y-3 bg-surface rounded-xl border border-border-muted shadow-xs">
-            <Compass className="w-8 h-8 text-teal-primary animate-spin mx-auto" />
-            <p className="font-mono text-xs text-muted-foreground">
-              Loading trip passport & itinerary sections...
-            </p>
-          </div>
-        )}
+        {isLoading && <BuilderSkeleton />}
 
         {error && (
           <Alert variant="danger" badgeText="ERROR">
@@ -530,7 +536,7 @@ export default function ItineraryBuilderPage({
                                 <Edit3 className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={(e) => handleDeleteSection(e, section.id)}
+                                onClick={(e) => handlePromptDeleteSection(e, section)}
                                 className="p-1.5 rounded hover:bg-surface text-brick-danger transition-colors cursor-pointer"
                                 title="Delete stop"
                               >
@@ -610,6 +616,54 @@ export default function ItineraryBuilderPage({
           onSectionSaved={handleSectionSaved}
         />
       )}
+
+      {/* Custom Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!deletingSectionId}
+        onClose={() => setDeletingSectionId(null)}
+        onConfirm={handleConfirmDeleteSection}
+        title="Delete Itinerary Stop"
+        itemName={deletingSectionTitle}
+        isLoading={isDeletingSection}
+      />
+    </div>
+  );
+}
+
+/**
+ * Shimmering Builder Skeleton Loader Component
+ */
+function BuilderSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Banner Skeleton */}
+      <div className="p-6 bg-surface border border-border-muted rounded-xl space-y-5">
+        <div className="flex flex-col md:flex-row justify-between gap-4">
+          <div className="space-y-2">
+            <div className="h-4 w-40 bg-border-muted/60 rounded" />
+            <div className="h-8 w-64 bg-border-muted/80 rounded-lg" />
+            <div className="h-4 w-48 bg-border-muted/50 rounded" />
+          </div>
+          <div className="h-12 w-48 bg-border-muted/40 rounded-lg" />
+        </div>
+        <div className="h-2.5 w-full bg-border-muted/40 rounded-full" />
+      </div>
+
+      {/* Sections List Skeleton */}
+      <div className="space-y-4 pt-2">
+        <div className="h-6 w-44 bg-border-muted/60 rounded" />
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="p-5 bg-surface border border-border-muted rounded-xl space-y-3">
+            <div className="flex justify-between items-center">
+              <div className="space-y-2">
+                <div className="h-5 w-48 bg-border-muted/60 rounded" />
+                <div className="h-3.5 w-32 bg-border-muted/40 rounded" />
+              </div>
+              <div className="h-8 w-24 bg-border-muted/40 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

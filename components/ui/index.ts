@@ -9,3 +9,4 @@ export * from "./tabs";
 export * from "./alert";
 export * from "./toast";
 export * from "./dropdown";
+export * from "./confirm-delete-modal";

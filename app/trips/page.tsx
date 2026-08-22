@@ -230,8 +230,8 @@ export default function MyTripsPage() {
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer whitespace-nowrap ${activeTab === tab.id
-                    ? "bg-teal-primary text-white shadow-xs"
-                    : "bg-paper text-muted-foreground hover:text-ink border border-border-muted/60"
+                  ? "bg-teal-primary text-white shadow-xs"
+                  : "bg-paper text-muted-foreground hover:text-ink border border-border-muted/60"
                   }`}
               >
                 {tab.label}
@@ -334,13 +334,13 @@ export default function MyTripsPage() {
         tripDateRange={
           tripToDelete?.startDate && tripToDelete?.endDate
             ? `${new Date(tripToDelete.startDate).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })} – ${new Date(tripToDelete.endDate).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}`
+              month: "short",
+              day: "numeric",
+            })} – ${new Date(tripToDelete.endDate).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}`
             : undefined
         }
         onClose={() => setTripToDelete(null)}

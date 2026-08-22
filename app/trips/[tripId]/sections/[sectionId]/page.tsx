@@ -24,7 +24,7 @@ import {
   Save,
 } from "lucide-react";
 import { Navbar } from "@/components/dashboard/navbar";
-import { Button, Card, Badge, Alert, Input, Textarea, Select, Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from "@/components/ui";
+import { Button, Card, Badge, Alert, Input, Textarea, Select, Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter, ConfirmDeleteModal, toast } from "@/components/ui";
 
 interface SectionActivity {
   id: string;
@@ -72,11 +72,15 @@ export default function SectionActivitiesPage({
   const [showAllSuggestions, setShowAllSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [actionSuccess, setActionSuccess] = useState("");
 
   // Activity Modal State
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<SectionActivity | null>(null);
+
+  // Delete Activity Modal State
+  const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null);
+  const [deletingActivityTitle, setDeletingActivityTitle] = useState<string>("");
+  const [isDeletingActivity, setIsDeletingActivity] = useState(false);
   const [activityForm, setActivityForm] = useState({
     title: "",
     category: "SIGHTSEEING",
@@ -202,14 +206,14 @@ export default function SectionActivitiesPage({
       });
 
       const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error?.message || "Failed to save activity");
-      }
-
-      setActionSuccess(isEdit ? "Activity updated!" : "Activity added to section!");
+      toast.success(
+        isEdit ? "Activity Updated" : "Activity Added",
+        isEdit
+          ? `Activity "${activityForm.title}" has been updated.`
+          : `New activity "${activityForm.title}" added to section!`
+      );
       setIsActivityModalOpen(false);
       fetchSectionData();
-      setTimeout(() => setActionSuccess(""), 3000);
     } catch (err: any) {
       setActivityError(err.message || "Failed to save activity");
     } finally {
@@ -217,15 +221,21 @@ export default function SectionActivitiesPage({
     }
   };
 
-  // Delete Activity
-  const handleDeleteActivity = async (activityId: string) => {
-    if (!confirm("Are you sure you want to delete this activity?")) return;
+  // Delete Activity Prompt
+  const handlePromptDeleteActivity = (act: SectionActivity) => {
+    setDeletingActivityId(act.id);
+    setDeletingActivityTitle(act.title);
+  };
+
+  const handleConfirmDeleteActivity = async () => {
+    if (!deletingActivityId) return;
+    setIsDeletingActivity(true);
 
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token) return;
 
     try {
-      const res = await fetch(`/api/v1/trips/${tripId}/sections/${sectionId}/activities/${activityId}`, {
+      const res = await fetch(`/api/v1/trips/${tripId}/sections/${sectionId}/activities/${deletingActivityId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -235,11 +245,13 @@ export default function SectionActivitiesPage({
         throw new Error(data.error?.message || "Failed to delete activity");
       }
 
-      setActionSuccess("Activity deleted.");
+      toast.info("Activity Deleted", `Activity "${deletingActivityTitle}" removed from section.`);
+      setDeletingActivityId(null);
       fetchSectionData();
-      setTimeout(() => setActionSuccess(""), 3000);
     } catch (err: any) {
-      alert(err.message || "Failed to delete activity");
+      toast.error("Error Deleting Activity", err.message || "Failed to delete activity");
+    } finally {
+      setIsDeletingActivity(false);
     }
   };
 
@@ -268,10 +280,10 @@ export default function SectionActivitiesPage({
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Itinerary Builder</span>
             </Link>
-            <span className="text-border-muted">•</span>
+            {/* <span className="text-border-muted">•</span>
             <span className="stamp-badge text-[11px]">
               STOP ACTIVITIES & EXPERIENCES
-            </span>
+            </span> */}
           </div>
 
           <div className="flex items-center gap-2">
@@ -279,7 +291,7 @@ export default function SectionActivitiesPage({
               variant="secondary"
               size="sm"
               onClick={() => {
-                setActionSuccess("Section activities saved!");
+                toast.success("Section Saved", "Returning to itinerary builder...");
                 setTimeout(() => {
                   router.push(`/trips/${tripId}/builder`);
                 }, 400);
@@ -300,25 +312,12 @@ export default function SectionActivitiesPage({
           </div>
         </div>
 
-        {/* Global Loading / Error / Success Alerts */}
-        {isLoading && (
-          <div className="p-12 text-center space-y-3 bg-surface rounded-xl border border-border-muted shadow-xs">
-            <Compass className="w-8 h-8 text-teal-primary animate-spin mx-auto" />
-            <p className="font-mono text-xs text-muted-foreground">
-              Loading section activities & place suggestions...
-            </p>
-          </div>
-        )}
+        {/* Global Loading / Error Alerts */}
+        {isLoading && <SectionActivitiesSkeleton />}
 
         {error && (
           <Alert variant="danger" badgeText="ERROR">
             {error}
-          </Alert>
-        )}
-
-        {actionSuccess && (
-          <Alert variant="success" badgeText="UPDATED">
-            {actionSuccess}
           </Alert>
         )}
 
@@ -524,7 +523,7 @@ export default function SectionActivitiesPage({
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteActivity(activity.id)}
+                          onClick={() => handlePromptDeleteActivity(activity)}
                           className="p-1.5 rounded hover:bg-surface text-brick-danger transition-colors cursor-pointer"
                           title="Delete activity"
                         >
@@ -536,33 +535,21 @@ export default function SectionActivitiesPage({
                 </div>
               )}
             </div>
-
-            {/* Return CTA */}
-            <div className="pt-4 route-divider flex justify-start">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push(`/trips/${tripId}/builder`)}
-                leftIcon={<ArrowLeft className="w-4 h-4" />}
-              >
-                Return to Itinerary Builder
-              </Button>
-            </div>
           </>
         )}
       </main>
 
-      {/* Add / Edit Activity Dialog Modal */}
+      {/* Add / Edit Activity Modal */}
       <Dialog isOpen={isActivityModalOpen} onClose={() => setIsActivityModalOpen(false)}>
-        <DialogHeader stampText={editingActivity ? "UPDATE ACTIVITY" : "NEW STOP ACTIVITY"}>
-          <DialogTitle>{editingActivity ? "Edit Activity" : "Add Activity to Stop"}</DialogTitle>
+        <DialogHeader stampText={editingActivity ? "UPDATE ACTIVITY" : "NEW ACTIVITY"}>
+          <DialogTitle>{editingActivity ? "Edit Activity" : "Add Custom Activity"}</DialogTitle>
           <DialogDescription>
-            Specify the activity name, category, estimated cost, time, and notes.
+            Specify details, cost, and time for this itinerary activity.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSaveActivity}>
-          <DialogContent className="space-y-4">
+          <DialogContent className="space-y-4 max-h-[75vh] overflow-y-auto">
             {activityError && (
               <Alert variant="danger" badgeText="REQUIRED">
                 {activityError}
@@ -571,10 +558,11 @@ export default function SectionActivitiesPage({
 
             <Input
               id="act-title"
+              name="title"
               label="Activity Title"
               value={activityForm.title}
-              onChange={(e) => setActivityForm((prev) => ({ ...prev, title: e.target.value }))}
-              placeholder="e.g. Louvre Museum Guided Tour / Hawa Mahal Visit"
+              onChange={(e) => setActivityForm({ ...activityForm, title: e.target.value })}
+              placeholder="e.g. Guided Louvre Museum Tour / Eiffel Tower Summit Tickets"
               leftIcon={<Tag className="w-4 h-4 text-teal-primary/70" />}
               required
             />
@@ -582,45 +570,49 @@ export default function SectionActivitiesPage({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select
                 id="act-category"
+                name="category"
                 label="Category"
                 value={activityForm.category}
-                onChange={(e) => setActivityForm((prev) => ({ ...prev, category: e.target.value }))}
+                onChange={(e) => setActivityForm({ ...activityForm, category: e.target.value })}
               >
                 <option value="SIGHTSEEING">🏛️ Sightseeing</option>
-                <option value="FOOD">🍲 Food & Dining</option>
-                <option value="CULTURE">🎨 Culture & Art</option>
-                <option value="ADVENTURE">🌲 Adventure & Nature</option>
-                <option value="LODGING">🏨 Lodging & Stay</option>
-                <option value="MISC">📦 Miscellaneous</option>
+                <option value="FOOD">🍷 Food & Dining</option>
+                <option value="ENTERTAINMENT">🎭 Entertainment</option>
+                <option value="SHOPPING">🛍️ Shopping</option>
+                <option value="TRANSPORT">🚕 Transport</option>
+                <option value="OTHER">📌 Other</option>
               </Select>
 
               <Input
                 id="act-cost"
+                name="cost"
                 type="number"
-                label="Estimated Cost ($USD)"
+                label="Cost ($USD)"
                 value={activityForm.cost}
-                onChange={(e) => setActivityForm((prev) => ({ ...prev, cost: e.target.value }))}
-                placeholder="e.g. 45"
+                onChange={(e) => setActivityForm({ ...activityForm, cost: e.target.value })}
+                placeholder="e.g. 65"
                 leftIcon={<DollarSign className="w-4 h-4 text-teal-primary/70" />}
               />
             </div>
 
             <Input
               id="act-time"
-              label="Time / Duration (Optional)"
+              name="time"
+              label="Scheduled Time / Duration"
               value={activityForm.time}
-              onChange={(e) => setActivityForm((prev) => ({ ...prev, time: e.target.value }))}
-              placeholder="e.g. 10:00 AM or 2 hours"
+              onChange={(e) => setActivityForm({ ...activityForm, time: e.target.value })}
+              placeholder="e.g. 10:00 AM - 1:00 PM (3 hours)"
               leftIcon={<Clock className="w-4 h-4 text-amber-accent/70" />}
             />
 
             <Textarea
               id="act-description"
-              label="Activity Description & Notes"
+              name="description"
+              label="Notes & Booking Details"
               badge="OPTIONAL"
               rows={2}
               value={activityForm.description}
-              onChange={(e) => setActivityForm((prev) => ({ ...prev, description: e.target.value }))}
+              onChange={(e) => setActivityForm({ ...activityForm, description: e.target.value })}
               placeholder="Ticket reservation codes, meeting location, special instructions..."
             />
           </DialogContent>
@@ -646,6 +638,52 @@ export default function SectionActivitiesPage({
           </DialogFooter>
         </form>
       </Dialog>
+
+      {/* Custom Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!deletingActivityId}
+        onClose={() => setDeletingActivityId(null)}
+        onConfirm={handleConfirmDeleteActivity}
+        title="Delete Activity"
+        itemName={deletingActivityTitle}
+        isLoading={isDeletingActivity}
+      />
+    </div>
+  );
+}
+
+/**
+ * Shimmering Section Activities Skeleton Loader Component
+ */
+function SectionActivitiesSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Header Card Skeleton */}
+      <div className="p-6 bg-surface border border-border-muted rounded-xl space-y-4">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <div className="h-4 w-32 bg-border-muted/60 rounded" />
+            <div className="h-7 w-60 bg-border-muted/80 rounded-lg" />
+          </div>
+          <div className="h-10 w-36 bg-border-muted/40 rounded-lg" />
+        </div>
+      </div>
+
+      {/* Activities Grid Skeleton */}
+      <div className="space-y-3 pt-2">
+        <div className="h-6 w-40 bg-border-muted/60 rounded" />
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="p-4 bg-surface border border-border-muted rounded-xl space-y-2">
+            <div className="flex justify-between items-center">
+              <div className="space-y-2">
+                <div className="h-5 w-48 bg-border-muted/60 rounded" />
+                <div className="h-4 w-24 bg-border-muted/40 rounded" />
+              </div>
+              <div className="h-8 w-16 bg-border-muted/40 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

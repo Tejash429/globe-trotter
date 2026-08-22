@@ -13,6 +13,7 @@ import {
   Textarea,
   Select,
   Alert,
+  toast,
 } from "@/components/ui";
 import { Plus, Calendar, DollarSign, Tag, FileText, CheckCircle2 } from "lucide-react";
 
@@ -59,7 +60,6 @@ export function AddSectionModal({
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -82,7 +82,6 @@ export function AddSectionModal({
       });
     }
     setError("");
-    setSuccess(false);
   }, [initialData, isOpen, defaultStartDate, defaultEndDate]);
 
   const handleChange = (
@@ -149,13 +148,14 @@ export function AddSectionModal({
         throw new Error(errorMsg);
       }
 
-      setSuccess(true);
+      toast.success(
+        isEdit ? "Waypoint Updated" : "Waypoint Stop Added",
+        isEdit
+          ? `Itinerary stop "${formData.title}" has been updated.`
+          : `New stop "${formData.title}" added to itinerary!`
+      );
       onSectionSaved(data.data);
-
-      setTimeout(() => {
-        setSuccess(false);
-        onClose();
-      }, 700);
+      onClose();
     } catch (err: any) {
       setError(err.message || "Failed to save itinerary section.");
     } finally {
@@ -177,12 +177,6 @@ export function AddSectionModal({
           {error && (
             <Alert variant="danger" badgeText="REQUIRED">
               {error}
-            </Alert>
-          )}
-
-          {success && (
-            <Alert variant="success" badgeText="SAVED">
-              {initialData ? "Waypoint updated successfully!" : "Waypoint added to itinerary!"}
             </Alert>
           )}
 

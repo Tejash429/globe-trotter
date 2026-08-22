@@ -269,15 +269,8 @@ export default function TripCalendarPage() {
           </div>
         </Card>
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="p-12 text-center space-y-3 bg-surface rounded-xl border border-border-muted shadow-xs">
-            <Compass className="w-8 h-8 text-teal-primary animate-spin mx-auto" />
-            <p className="font-mono text-xs text-muted-foreground">
-              Mapping your travel timeline &amp; calendar schedule...
-            </p>
-          </div>
-        )}
+        {/* Loading State Skeleton */}
+        {isLoading && <CalendarSkeleton />}
 
         {/* Main Monthly Calendar Frame matching Excalidraw reference */}
         {!isLoading && (
@@ -608,6 +601,46 @@ export default function TripCalendarPage() {
         onClose={() => setIsPlanModalOpen(false)}
         onTripCreated={() => router.push("/calendar")}
       />
+    </div>
+  );
+}
+
+/**
+ * Shimmering Monthly Calendar Grid Skeleton Loader Component
+ */
+function CalendarSkeleton() {
+  return (
+    <div className="bg-surface rounded-2xl border border-border-muted shadow-sm p-4 sm:p-6 space-y-6 animate-pulse">
+      {/* Skeleton Month Header */}
+      <div className="flex items-center justify-between border-b border-border-muted pb-4">
+        <div className="h-10 w-10 bg-border-muted/50 rounded-xl" />
+        <div className="space-y-2 text-center flex flex-col items-center">
+          <div className="h-3 w-24 bg-border-muted/40 rounded" />
+          <div className="h-7 w-48 bg-border-muted/70 rounded-lg" />
+        </div>
+        <div className="h-10 w-20 bg-border-muted/50 rounded-xl" />
+      </div>
+
+      {/* Skeleton Day Header Grid */}
+      <div className="grid grid-cols-7 gap-2">
+        {[...Array(7)].map((_, i) => (
+          <div key={i} className="h-4 bg-border-muted/40 rounded mx-auto w-8 sm:w-12" />
+        ))}
+      </div>
+
+      {/* Skeleton 5-week Calendar Cells Grid */}
+      <div className="grid grid-cols-7 gap-2 sm:gap-3">
+        {[...Array(35)].map((_, i) => (
+          <div
+            key={i}
+            className="min-h-[80px] sm:min-h-[110px] p-2 bg-paper/60 rounded-xl border border-border-muted/40 space-y-2"
+          >
+            <div className="h-4 w-5 bg-border-muted/60 rounded" />
+            {i % 4 === 1 && <div className="h-4 w-full bg-teal-primary/20 rounded" />}
+            {i % 6 === 2 && <div className="h-4 w-full bg-amber-accent/20 rounded" />}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

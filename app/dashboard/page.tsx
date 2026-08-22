@@ -42,6 +42,7 @@ export default function DashboardPage() {
           onFilterChange={setFilterBy}
           sortBy={sortBy}
           onSortByChange={setSortBy}
+          onOpenPlanModal={() => setIsPlanModalOpen(true)}
         />
 
         {/* 4. Filter Destination Cards (Europe, Asia, etc.) */}
@@ -57,17 +58,17 @@ export default function DashboardPage() {
         />
       </main>
 
-      {/* Floating Action Button (Mobile Plan Trip Shortcut) */}
-      <div className="fixed bottom-6 right-6 sm:hidden z-40">
-        <Button
-          variant="primary"
-          size="lg"
+      {/* Floating Action Button (Always Visible in Bottom Right Corner) */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          type="button"
           onClick={() => setIsPlanModalOpen(true)}
-          leftIcon={<Plus className="w-5 h-5 stroke-[2.5]" />}
-          className="rounded-full shadow-lg h-14 w-14 p-0 flex items-center justify-center font-bold"
+          className="flex items-center gap-2.5 px-4 py-3.5 rounded-full bg-teal-primary hover:bg-teal-primary/90 text-white font-mono text-xs font-extrabold shadow-xl hover:shadow-2xl transition-all duration-200 cursor-pointer border border-white/20 hover:scale-105 active:scale-95"
+          title="Plan New Trip"
         >
-          <span className="sr-only">Plan New Trip</span>
-        </Button>
+          <Plus className="w-5 h-5 stroke-[2.5]" />
+          <span className="tracking-wider uppercase font-bold">Plan Trip</span>
+        </button>
       </div>
 
       {/* Modals */}

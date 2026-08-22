@@ -13,6 +13,7 @@ interface SearchFilterBarProps {
   onFilterChange: (filter: string) => void;
   sortBy: string;
   onSortByChange: (sort: string) => void;
+  onOpenPlanModal?: () => void;
 }
 
 const GROUP_OPTIONS: DropdownOption[] = [
@@ -46,6 +47,7 @@ export function SearchFilterBar({
   onFilterChange,
   sortBy,
   onSortByChange,
+  onOpenPlanModal,
 }: SearchFilterBarProps) {
   const hasActiveFilters = searchQuery || groupBy !== "all" || filterBy !== "all" || sortBy !== "popular";
 
@@ -82,7 +84,7 @@ export function SearchFilterBar({
           )}
         </div>
 
-        {/* Action Controls: Group By, Filter, Sort By using sleek custom dropdown buttons */}
+        {/* Action Controls: Group By, Filter, Sort By & Plan Trip Button */}
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
           {/* Group By Dropdown */}
           <CustomDropdown
@@ -114,6 +116,9 @@ export function SearchFilterBar({
             align="right"
             isActive={sortBy !== "popular"}
           />
+
+          {/* Plan New Trip CTA Button */}
+          
         </div>
       </div>
 
