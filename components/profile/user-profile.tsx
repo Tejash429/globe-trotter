@@ -197,35 +197,72 @@ export function UserProfile() {
     loadProfileAndTrips();
   }, []);
 
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    setUserData({ ...editForm });
+  const [isSaving, setIsSaving] = useState(false);
 
-    // Update local storage user
-    try {
-      const stored = localStorage.getItem("user");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        localStorage.setItem(
-          "user",
-          JSON.stringify({
-            ...parsed,
-            name: editForm.name,
-            firstName: editForm.firstName,
-            lastName: editForm.lastName,
-            phoneNumber: editForm.phoneNumber,
-            city: editForm.city,
-            country: editForm.country,
-            additionalInfo: editForm.additionalInfo,
-          })
-        );
-      }
-    } catch {
-      // Ignore
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+
+    let token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token && typeof document !== "undefined") {
+      const match = document.cookie.match(new RegExp("(^| )token=([^;]+)"));
+      if (match) token = match[2];
     }
 
-    setIsEditing(false);
-    toast.success("Profile Updated", "Your traveler credentials and preferences have been saved.");
+    try {
+      const res = await fetch("/api/v1/auth/me", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          firstName: editForm.firstName?.trim(),
+          lastName: editForm.lastName?.trim(),
+          phoneNumber: editForm.phoneNumber?.trim(),
+          city: editForm.city?.trim(),
+          country: editForm.country?.trim(),
+          additionalInfo: editForm.additionalInfo?.trim(),
+          avatarUrl: editForm.avatarUrl,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error?.message || "Failed to update profile");
+      }
+
+      const updated = data.data;
+      const formattedUser: UserProfileData = {
+        id: updated.id,
+        name: updated.name || `${updated.firstName || ""} ${updated.lastName || ""}`.trim() || "Traveler",
+        firstName: updated.firstName || "",
+        lastName: updated.lastName || "",
+        email: updated.email,
+        phoneNumber: updated.phoneNumber || "",
+        city: updated.city || "",
+        country: updated.country || "",
+        additionalInfo: updated.additionalInfo || "",
+        language: updated.language === "es" ? "Spanish (Español)" : updated.language === "fr" ? "French (Français)" : "English (US)",
+        role: updated.role || "USER",
+        avatarUrl: updated.avatarUrl || undefined,
+        joinedDate: updated.createdAt
+          ? new Date(updated.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+          : "Recent",
+        tripsCount: updated._count?.trips || trips.length,
+      };
+
+      setUserData(formattedUser);
+      setEditForm(formattedUser);
+      localStorage.setItem("user", JSON.stringify(updated));
+
+      setIsEditing(false);
+      toast.success("Profile Updated", "Your traveler passport credentials have been successfully updated.");
+    } catch (err: any) {
+      toast.error("Update Failed", err.message || "Failed to update profile. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Segregate trips into upcoming and completed based on dates or status
@@ -517,10 +554,11 @@ export function UserProfile() {
                           variant="secondary"
                           size="sm"
                           onClick={() => setIsEditing(false)}
+                          disabled={isSaving}
                         >
                           Cancel
                         </Button>
-                        <Button type="submit" variant="primary" size="sm">
+                        <Button type="submit" variant="primary" size="sm" isLoading={isSaving}>
                           Save Changes
                         </Button>
                       </div>
