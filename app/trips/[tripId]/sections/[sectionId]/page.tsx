@@ -19,6 +19,9 @@ import {
   Tag,
   FileText,
   Layers,
+  ChevronDown,
+  ChevronUp,
+  Save,
 } from "lucide-react";
 import { Navbar } from "@/components/dashboard/navbar";
 import { Button, Card, Badge, Alert, Input, Textarea, Select, Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from "@/components/ui";
@@ -66,6 +69,7 @@ export default function SectionActivitiesPage({
 
   const [section, setSection] = useState<SectionDetail | null>(null);
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionSuccess, setActionSuccess] = useState("");
@@ -270,14 +274,30 @@ export default function SectionActivitiesPage({
             </span>
           </div>
 
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => handleOpenAddActivity()}
-            leftIcon={<Plus className="w-4 h-4" />}
-          >
-            Add Custom Activity
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setActionSuccess("Section activities saved!");
+                setTimeout(() => {
+                  router.push(`/trips/${tripId}/builder`);
+                }, 400);
+              }}
+              leftIcon={<Save className="w-4 h-4 text-teal-primary" />}
+            >
+              Save & Return to Builder
+            </Button>
+
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => handleOpenAddActivity()}
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              Add Custom Activity
+            </Button>
+          </div>
         </div>
 
         {/* Global Loading / Error / Success Alerts */}
@@ -363,16 +383,35 @@ export default function SectionActivitiesPage({
 
             {/* OpenTripMap Places Suggestions Bar */}
             {suggestions.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-accent" />
-                  <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-ink">
-                    Popular Places to Visit in {section.destinationPlace} (OpenTripMap API):
-                  </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-accent" />
+                    <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-ink">
+                      Places to Visit in {section.destinationPlace} (OpenTripMap API):
+                    </h3>
+                  </div>
+
+                  {suggestions.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllSuggestions(!showAllSuggestions)}
+                      className="font-mono text-xs font-semibold text-teal-primary hover:text-teal-hover flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>
+                        {showAllSuggestions ? "Show Less" : `+${suggestions.length - 3} More Activities`}
+                      </span>
+                      {showAllSuggestions ? (
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      ) : (
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {suggestions.map((sug) => (
+                  {(showAllSuggestions ? suggestions : suggestions.slice(0, 3)).map((sug) => (
                     <button
                       key={sug.id}
                       onClick={() => handleOpenAddActivity(sug.title, sug.description)}

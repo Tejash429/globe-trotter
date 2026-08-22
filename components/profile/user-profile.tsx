@@ -168,11 +168,13 @@ export function UserProfile() {
         });
 
         const tripsDataRes = await tripsRes.json();
-        if (tripsRes.ok && tripsDataRes.success && Array.isArray(tripsDataRes.data)) {
-          setTrips(tripsDataRes.data);
-          if (userDataRes?.data?._count) {
-            setUserData((prev) => prev ? { ...prev, tripsCount: tripsDataRes.data.length } : null);
-          }
+        const tripList = Array.isArray(tripsDataRes.data)
+          ? tripsDataRes.data
+          : tripsDataRes.data?.trips || [];
+
+        if (tripsRes.ok && tripsDataRes.success) {
+          setTrips(tripList);
+          setUserData((prev) => (prev ? { ...prev, tripsCount: tripList.length } : null));
         } else {
           setTrips([]);
         }
@@ -697,9 +699,9 @@ function LiveTripCard({ trip }: { trip: TripData }) {
           <span className="text-xs font-mono text-muted-foreground">
             {totalDays} {totalDays === 1 ? "Day" : "Days"} Duration
           </span>
-          <Link href="/dashboard">
+          <Link href={`/trips/${trip.id}/builder`}>
             <Button variant="outline" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-              View Details
+              Open Builder
             </Button>
           </Link>
         </div>

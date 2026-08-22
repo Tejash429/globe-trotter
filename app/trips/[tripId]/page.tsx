@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Clock,
   Layers,
+  Save,
 } from "lucide-react";
 import { Navbar } from "@/components/dashboard/navbar";
 import { Button, Card, Badge, Alert } from "@/components/ui";
@@ -133,6 +134,26 @@ export default function ItineraryViewPage({
     });
   };
 
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [actionSuccess, setActionSuccess] = useState("");
+
+  const handleSaveItinerary = async () => {
+    setIsSaving(true);
+    setError("");
+    try {
+      setSaveSuccess(true);
+      setActionSuccess("Itinerary Passport saved successfully! Redirecting to your trips...");
+      setTimeout(() => {
+        router.push("/trips");
+      }, 1000);
+    } catch (err: any) {
+      setError("Failed to save itinerary. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleShare = () => {
     if (typeof window !== "undefined") {
       navigator.clipboard.writeText(window.location.href);
@@ -147,14 +168,21 @@ export default function ItineraryViewPage({
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Breadcrumb Header */}
-        <div className="flex items-center justify-between route-divider pb-3">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 route-divider pb-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-1.5 font-sans text-xs font-semibold text-muted-foreground hover:text-teal-primary transition-colors"
+              href={`/trips/${tripId}/builder`}
+              className="inline-flex items-center gap-1.5 font-sans text-xs font-semibold text-teal-primary hover:text-teal-hover transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back to Dashboard</span>
+              <span>Back to Itinerary Builder</span>
+            </Link>
+            <span className="text-border-muted">•</span>
+            <Link
+              href="/dashboard"
+              className="font-sans text-xs font-semibold text-muted-foreground hover:text-teal-primary transition-colors"
+            >
+              Dashboard
             </Link>
             <span className="text-border-muted">•</span>
             <span className="stamp-badge text-[11px]">
@@ -164,6 +192,22 @@ export default function ItineraryViewPage({
 
           <div className="flex items-center gap-2">
             <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleSaveItinerary}
+              isLoading={isSaving}
+              leftIcon={
+                saveSuccess ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 animate-bounce" />
+                ) : (
+                  <Save className="w-4 h-4 text-teal-primary" />
+                )
+              }
+            >
+              {saveSuccess ? "Itinerary Saved!" : "Save Itinerary"}
+            </Button>
+
+            <Button
               variant="outline"
               size="sm"
               onClick={handleShare}
@@ -171,6 +215,7 @@ export default function ItineraryViewPage({
             >
               {copied ? "Link Copied!" : "Share Itinerary"}
             </Button>
+
             <Button
               variant="primary"
               size="sm"
@@ -181,6 +226,12 @@ export default function ItineraryViewPage({
             </Button>
           </div>
         </div>
+
+        {actionSuccess && (
+          <Alert variant="success" badgeText="SAVED">
+            {actionSuccess}
+          </Alert>
+        )}
 
         {isLoading && (
           <div className="p-12 text-center space-y-3 bg-surface rounded-xl border border-border-muted shadow-xs">
