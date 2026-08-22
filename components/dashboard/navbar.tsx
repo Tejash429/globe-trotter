@@ -153,14 +153,6 @@ export function Navbar({ onOpenPlanModal }: NavbarProps) {
                         <span>Traveler Profile & Settings</span>
                       </Link>
 
-                      <Link
-                        href="/dashboard"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-sans text-ink hover:bg-paper transition-colors font-medium"
-                      >
-                        <Map className="w-4 h-4 text-teal-primary" />
-                        <span>My Travel Passport</span>
-                      </Link>
                     </div>
 
                     <div className="border-t border-border-muted/60 pt-1">

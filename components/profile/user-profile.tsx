@@ -10,35 +10,35 @@ import {
   Globe,
   Calendar,
   Edit3,
-  CheckCircle2,
   Clock,
   ArrowRight,
   MapPin,
-  ShieldCheck,
-  Plus,
-  Sparkles,
   Camera,
-  LogOut,
   Phone,
   FileText,
-  Ticket,
+  Plus,
+  CompassIcon,
 } from "lucide-react";
 import { Navbar } from "@/components/dashboard/navbar";
 import { Badge, Button, Alert, Card } from "@/components/ui";
 
-interface TripItem {
+interface TripData {
   id: string;
-  code: string;
+  userId: string;
   title: string;
-  dateRange: string;
-  stopsCount: number;
-  activitiesCount: number;
-  durationDays: number;
-  status: "UPCOMING" | "COMPLETED";
-  coverUrl: string;
-  waypoints: { city: string; duration: string }[];
-  spentBudget: number;
+  destinationPlace: string;
+  description?: string;
+  coverImage?: string | null;
+  startDate: string;
+  endDate: string;
   totalBudget: number;
+  currency?: string;
+  visibility?: string;
+  status?: "upcoming" | "ongoing" | "completed";
+  sectionsCount?: number;
+  totalSectionBudget?: number;
+  totalEstimatedCost?: number;
+  sections?: any[];
 }
 
 interface UserProfileData {
@@ -58,75 +58,13 @@ interface UserProfileData {
   tripsCount: number;
 }
 
-const DEFAULT_PREPLANNED_TRIPS: TripItem[] = [
-  {
-    id: "trip-1",
-    code: "GT-EUR-2026",
-    title: "Grand European Odyssey",
-    dateRange: "JUL 01 – JUL 15, 2026",
-    stopsCount: 3,
-    activitiesCount: 16,
-    durationDays: 14,
-    status: "UPCOMING",
-    coverUrl:
-      "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&auto=format&fit=crop&q=80",
-    waypoints: [
-      { city: "Paris", duration: "4d" },
-      { city: "Amsterdam", duration: "4d" },
-      { city: "Rome", duration: "6d" },
-    ],
-    spentBudget: 3100,
-    totalBudget: 3500,
-  },
-  {
-    id: "trip-2",
-    code: "GT-JPN-2026",
-    title: "Tokyo & Kyoto Explorer",
-    dateRange: "SEP 10 – SEP 22, 2026",
-    stopsCount: 3,
-    activitiesCount: 14,
-    durationDays: 12,
-    status: "UPCOMING",
-    coverUrl:
-      "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop&q=80",
-    waypoints: [
-      { city: "Tokyo", duration: "6d" },
-      { city: "Hakone", duration: "2d" },
-      { city: "Kyoto", duration: "4d" },
-    ],
-    spentBudget: 2800,
-    totalBudget: 3000,
-  },
-];
-
-const DEFAULT_PREVIOUS_TRIPS: TripItem[] = [
-  {
-    id: "trip-3",
-    code: "GT-IDN-2026",
-    title: "Bali Coastal Escape",
-    dateRange: "JAN 12 – JAN 22, 2026",
-    stopsCount: 3,
-    activitiesCount: 12,
-    durationDays: 10,
-    status: "COMPLETED",
-    coverUrl:
-      "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&auto=format&fit=crop&q=80",
-    waypoints: [
-      { city: "Seminyak", duration: "3d" },
-      { city: "Ubud", duration: "4d" },
-      { city: "Uluwatu", duration: "3d" },
-    ],
-    spentBudget: 1950,
-    totalBudget: 2000,
-  },
-];
-
 export function UserProfile() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [userData, setUserData] = useState<UserProfileData | null>(null);
+  const [trips, setTrips] = useState<TripData[]>([]);
   const [editForm, setEditForm] = useState<UserProfileData>({
     id: "",
     name: "",
@@ -145,7 +83,7 @@ export function UserProfile() {
   });
 
   useEffect(() => {
-    async function loadUserProfile() {
+    async function loadProfileAndTrips() {
       setIsLoading(true);
       const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
@@ -167,7 +105,7 @@ export function UserProfile() {
               additionalInfo: parsed.additionalInfo || "",
               language: parsed.language === "es" ? "Spanish (Español)" : parsed.language === "fr" ? "French (Français)" : "English (US)",
               role: parsed.role || "USER",
-              avatarUrl: parsed.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
+              avatarUrl: parsed.avatarUrl || undefined,
               joinedDate: parsed.createdAt
                 ? new Date(parsed.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
                 : "Recent",
@@ -186,15 +124,16 @@ export function UserProfile() {
       }
 
       try {
-        const res = await fetch("/api/v1/auth/me", {
+        // 1. Fetch User Profile
+        const userRes = await fetch("/api/v1/auth/me", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        const data = await res.json();
-        if (res.ok && data.success && data.data) {
-          const u = data.data;
+        const userDataRes = await userRes.json();
+        if (userRes.ok && userDataRes.success && userDataRes.data) {
+          const u = userDataRes.data;
           const formattedUser: UserProfileData = {
             id: u.id,
             name: u.name || `${u.firstName || ""} ${u.lastName || ""}`.trim() || "Traveler",
@@ -207,9 +146,7 @@ export function UserProfile() {
             additionalInfo: u.additionalInfo || "",
             language: u.language === "es" ? "Spanish (Español)" : u.language === "fr" ? "French (Français)" : "English (US)",
             role: u.role || "USER",
-            avatarUrl:
-              u.avatarUrl ||
-              "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
+            avatarUrl: u.avatarUrl || undefined,
             joinedDate: u.createdAt
               ? new Date(u.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
               : "August 2026",
@@ -218,21 +155,35 @@ export function UserProfile() {
 
           setUserData(formattedUser);
           setEditForm(formattedUser);
-
-          // Update local storage session cache
           localStorage.setItem("user", JSON.stringify(u));
         } else {
           setUserData(null);
         }
+
+        // 2. Fetch User Trips
+        const tripsRes = await fetch("/api/v1/trips", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const tripsDataRes = await tripsRes.json();
+        if (tripsRes.ok && tripsDataRes.success && Array.isArray(tripsDataRes.data)) {
+          setTrips(tripsDataRes.data);
+          if (userDataRes?.data?._count) {
+            setUserData((prev) => prev ? { ...prev, tripsCount: tripsDataRes.data.length } : null);
+          }
+        } else {
+          setTrips([]);
+        }
       } catch (err) {
-        console.error("Failed to fetch /api/v1/auth/me:", err);
-        setUserData(null);
+        console.error("Failed to load profile data:", err);
       } finally {
         setIsLoading(false);
       }
     }
 
-    loadUserProfile();
+    loadProfileAndTrips();
   }, []);
 
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -266,6 +217,20 @@ export function UserProfile() {
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
   };
+
+  // Segregate trips into upcoming and completed based on dates or status
+  const now = new Date();
+  const upcomingTrips = trips.filter((t) => {
+    if (t.status === "upcoming" || t.status === "ongoing") return true;
+    if (t.status === "completed") return false;
+    return new Date(t.endDate) >= now;
+  });
+
+  const previousTrips = trips.filter((t) => {
+    if (t.status === "completed") return true;
+    if (t.status === "upcoming" || t.status === "ongoing") return false;
+    return new Date(t.endDate) < now;
+  });
 
   return (
     <div className="min-h-screen w-full bg-paper text-ink flex flex-col font-sans selection:bg-amber-accent/20 selection:text-ink">
@@ -323,13 +288,19 @@ export function UserProfile() {
               <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8">
                 {/* Left: Image of the User */}
                 <div className="relative shrink-0 group">
-                  <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-dashed border-teal-primary/40 p-1.5 bg-paper shadow-xs transition-all duration-300 group-hover:border-teal-primary">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={userData.avatarUrl}
-                      alt={userData.name}
-                      className="w-full h-full rounded-full object-cover shadow-inner"
-                    />
+                  <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-dashed border-teal-primary/40 p-1.5 bg-paper shadow-xs transition-all duration-300 group-hover:border-teal-primary flex items-center justify-center overflow-hidden">
+                    {userData.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={userData.avatarUrl}
+                        alt={userData.name}
+                        className="w-full h-full rounded-full object-cover shadow-inner"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-teal-primary/10 flex items-center justify-center text-teal-primary font-mono text-xl font-bold uppercase">
+                        {userData.name ? userData.name.slice(0, 2) : <User className="w-8 h-8" />}
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -353,7 +324,7 @@ export function UserProfile() {
                         <Badge variant="amber">{userData.role}</Badge>
                       </div>
                       <p className="text-xs font-mono text-muted-foreground mt-1">
-                        Member since {userData.joinedDate} • {userData.tripsCount} Expeditions Planned
+                        Member since {userData.joinedDate} • {trips.length} Total Expeditions
                       </p>
                     </div>
 
@@ -397,7 +368,7 @@ export function UserProfile() {
                           <p className="text-xs font-sans text-ink font-medium">
                             {userData.city && userData.country
                               ? `${userData.city}, ${userData.country}`
-                              : "Not specified"}
+                              : userData.city || userData.country || "Not specified"}
                           </p>
                         </div>
 
@@ -555,7 +526,7 @@ export function UserProfile() {
               </div>
             </section>
 
-            {/* Section 2: Preplanned Trips */}
+            {/* Section 2: Preplanned Trips (Dynamic from /api/v1/trips) */}
             <section className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-dashed border-border-muted pb-3">
                 <div>
@@ -567,18 +538,25 @@ export function UserProfile() {
                   </p>
                 </div>
                 <Badge variant="teal">
-                  {DEFAULT_PREPLANNED_TRIPS.length} UPCOMING EXPEDITIONS
+                  {upcomingTrips.length} UPCOMING EXPEDITIONS
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {DEFAULT_PREPLANNED_TRIPS.map((trip) => (
-                  <TripCard key={trip.id} trip={trip} />
-                ))}
-              </div>
+              {upcomingTrips.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {upcomingTrips.map((trip) => (
+                    <LiveTripCard key={trip.id} trip={trip} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyTripsState
+                  title="No Upcoming Expeditions"
+                  description="You don't have any upcoming trips scheduled. Start exploring cities or map your next journey."
+                />
+              )}
             </section>
 
-            {/* Section 3: Previous Trips */}
+            {/* Section 3: Previous Trips (Dynamic from /api/v1/trips) */}
             <section className="space-y-4 pt-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-dashed border-border-muted pb-3">
                 <div>
@@ -590,19 +568,178 @@ export function UserProfile() {
                   </p>
                 </div>
                 <Badge variant="amber">
-                  {DEFAULT_PREVIOUS_TRIPS.length} COMPLETED EXPEDITIONS
+                  {previousTrips.length} COMPLETED EXPEDITIONS
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {DEFAULT_PREVIOUS_TRIPS.map((trip) => (
-                  <TripCard key={trip.id} trip={trip} />
-                ))}
-              </div>
+              {previousTrips.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {previousTrips.map((trip) => (
+                    <LiveTripCard key={trip.id} trip={trip} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyTripsState
+                  title="No Archived Trips"
+                  description="Completed expeditions and travel logs will appear here after your journeys conclude."
+                  showCreateButton={false}
+                />
+              )}
             </section>
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+/**
+ * Dynamic Trip Card Component built from live backend trip data
+ */
+function LiveTripCard({ trip }: { trip: TripData }) {
+  const startDateStr = trip.startDate
+    ? new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+    : "";
+  const endDateStr = trip.endDate
+    ? new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+    : "";
+  const dateRange = startDateStr && endDateStr ? `${startDateStr.toUpperCase()} – ${endDateStr.toUpperCase()}` : startDateStr;
+
+  const totalDays = trip.startDate && trip.endDate
+    ? Math.max(1, Math.round((new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / (1000 * 60 * 60 * 24)))
+    : 1;
+
+  const totalBudget = trip.totalBudget || 0;
+  const spentBudget = trip.totalSectionBudget || trip.totalEstimatedCost || 0;
+  const budgetPercentage = totalBudget > 0 ? Math.min(Math.round((spentBudget / totalBudget) * 100), 100) : 0;
+  const isCompleted = trip.status === "completed" || new Date(trip.endDate) < new Date();
+
+  const coverUrl =
+    trip.coverImage ||
+    "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&auto=format&fit=crop&q=80";
+
+  return (
+    <div className="bg-surface border border-border-muted rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(27,43,52,0.04)] hover:shadow-md transition-all duration-300 flex flex-col group">
+      {/* Cover Image Header */}
+      <div className="relative h-48 w-full overflow-hidden bg-slate-900">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={coverUrl}
+          alt={trip.title}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-slate-950/40" />
+
+        {/* Top Badges */}
+        <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+          <span className="px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md text-white font-mono text-[11px] font-bold tracking-wider border border-white/10 shadow-xs">
+            {trip.destinationPlace?.toUpperCase() || "EXPEDITION"}
+          </span>
+          <span
+            className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-semibold flex items-center gap-1 border shadow-xs ${
+              !isCompleted
+                ? "bg-teal-primary/90 text-white border-teal-primary"
+                : "bg-amber-accent/90 text-white border-amber-accent"
+            }`}
+          >
+            <Clock className="w-3 h-3" />
+            <span>{!isCompleted ? "UPCOMING" : "COMPLETED"}</span>
+          </span>
+        </div>
+
+        {/* Bottom Date Overlay */}
+        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white font-mono text-xs font-semibold drop-shadow-md">
+          <Calendar className="w-3.5 h-3.5 text-amber-accent" />
+          <span>{dateRange}</span>
+        </div>
+      </div>
+
+      {/* Body Content */}
+      <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+        <div>
+          <h3 className="font-display text-lg font-bold text-ink group-hover:text-teal-primary transition-colors">
+            {trip.title}
+          </h3>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+            {trip.description || `Journey to ${trip.destinationPlace} spanning ${totalDays} days.`}
+          </p>
+
+          {/* Destination tag */}
+          <div className="mt-3 p-2.5 rounded-xl bg-paper border border-border-muted/70 flex items-center justify-between">
+            <span className="text-[11px] font-mono text-ink flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-teal-primary" />
+              <span className="font-semibold">{trip.destinationPlace}</span>
+            </span>
+            <span className="text-[10px] font-mono text-muted-foreground">
+              {trip.sectionsCount ?? (trip.sections?.length || 0)} Sections
+            </span>
+          </div>
+        </div>
+
+        {/* Budget Progress Bar */}
+        <div className="space-y-1.5 border-t border-dashed border-border-muted pt-3">
+          <div className="flex justify-between text-xs font-mono">
+            <span className="text-muted-foreground">Allocated Budget:</span>
+            <span className="font-bold text-ink">
+              ${spentBudget.toLocaleString()} / ${totalBudget.toLocaleString()} {trip.currency || "USD"}
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-paper rounded-full overflow-hidden border border-border-muted/50">
+            <div
+              className="h-full bg-teal-primary rounded-full transition-all duration-500"
+              style={{ width: `${budgetPercentage}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-1">
+          <span className="text-xs font-mono text-muted-foreground">
+            {totalDays} {totalDays === 1 ? "Day" : "Days"} Duration
+          </span>
+          <Link href="/dashboard">
+            <Button variant="outline" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+              View Details
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Empty Trips State Component
+ */
+function EmptyTripsState({
+  title,
+  description,
+  showCreateButton = true,
+}: {
+  title: string;
+  description: string;
+  showCreateButton?: boolean;
+}) {
+  return (
+    <div className="p-8 rounded-2xl border border-dashed border-border-muted bg-surface text-center space-y-3">
+      <div className="w-12 h-12 rounded-full bg-paper border border-border-muted flex items-center justify-center mx-auto text-muted-foreground">
+        <CompassIcon className="w-6 h-6 text-teal-primary/70" />
+      </div>
+      <div>
+        <h3 className="font-display text-base font-bold text-ink">{title}</h3>
+        <p className="font-sans text-xs text-muted-foreground max-w-md mx-auto mt-1">
+          {description}
+        </p>
+      </div>
+      {showCreateButton && (
+        <div className="pt-2">
+          <Link href="/dashboard">
+            <Button variant="primary" size="sm" leftIcon={<Plus className="w-3.5 h-3.5" />}>
+              Plan a New Trip
+            </Button>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
@@ -666,110 +803,6 @@ function ProfileSkeleton() {
               </div>
             </div>
           ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TripCard({ trip }: { trip: TripItem }) {
-  const budgetPercentage = Math.min(
-    Math.round((trip.spentBudget / trip.totalBudget) * 100),
-    100
-  );
-
-  return (
-    <div className="bg-surface border border-border-muted rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(27,43,52,0.04)] hover:shadow-md transition-all duration-300 flex flex-col group">
-      {/* Cover Image Header */}
-      <div className="relative h-48 w-full overflow-hidden bg-slate-900">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={trip.coverUrl}
-          alt={trip.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-slate-950/40" />
-
-        {/* Top Badges */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-          <span className="px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md text-white font-mono text-[11px] font-bold tracking-wider border border-white/10 shadow-xs">
-            {trip.code}
-          </span>
-          <span
-            className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-semibold flex items-center gap-1 border shadow-xs ${
-              trip.status === "UPCOMING"
-                ? "bg-teal-primary/90 text-white border-teal-primary"
-                : "bg-amber-accent/90 text-white border-amber-accent"
-            }`}
-          >
-            <Clock className="w-3 h-3" />
-            <span>{trip.status}</span>
-          </span>
-        </div>
-
-        {/* Bottom Date Overlay */}
-        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white font-mono text-xs font-semibold drop-shadow-md">
-          <Calendar className="w-3.5 h-3.5 text-amber-accent" />
-          <span>{trip.dateRange}</span>
-        </div>
-      </div>
-
-      {/* Body Content */}
-      <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-        <div>
-          <h3 className="font-display text-lg font-bold text-ink group-hover:text-teal-primary transition-colors">
-            {trip.title}
-          </h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            {trip.stopsCount} Stops • {trip.activitiesCount} Activities
-          </p>
-
-          {/* Waypoints */}
-          <div className="mt-3 p-2.5 rounded-xl bg-paper border border-border-muted/70">
-            <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase block mb-1.5">
-              Waypoints
-            </span>
-            <div className="flex items-center gap-2 flex-wrap text-xs font-mono">
-              {trip.waypoints.map((wp, idx) => (
-                <span
-                  key={idx}
-                  className="inline-flex items-center gap-1 bg-surface px-2 py-0.5 rounded border border-border-muted text-ink"
-                >
-                  <MapPin className="w-3 h-3 text-teal-primary" />
-                  <span>{wp.city}</span>
-                  <span className="text-muted-foreground text-[10px]">({wp.duration})</span>
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Budget Progress Bar */}
-        <div className="space-y-1.5 border-t border-dashed border-border-muted pt-3">
-          <div className="flex justify-between text-xs font-mono">
-            <span className="text-muted-foreground">Estimated Budget:</span>
-            <span className="font-bold text-ink">
-              ${trip.spentBudget.toLocaleString()} / ${trip.totalBudget.toLocaleString()}
-            </span>
-          </div>
-          <div className="w-full h-1.5 bg-paper rounded-full overflow-hidden border border-border-muted/50">
-            <div
-              className="h-full bg-teal-primary rounded-full transition-all duration-500"
-              style={{ width: `${budgetPercentage}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-1">
-          <span className="text-xs font-mono text-muted-foreground">
-            {trip.durationDays} Days Duration
-          </span>
-          <Link href="/dashboard">
-            <Button variant="outline" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-              View Details
-            </Button>
-          </Link>
         </div>
       </div>
     </div>
