@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Lock, Eye, EyeOff, Compass, ArrowRight, ShieldCheck } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Compass, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button, Input, Card, Badge, Alert } from "@/components/ui";
 
 interface LoginFormProps {
@@ -12,20 +12,20 @@ interface LoginFormProps {
 
 export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!username.trim()) {
-      setError("Please enter your username or email address.");
+    if (!email.trim()) {
+      setError("Please enter your email address.");
       return;
     }
     if (!password) {
@@ -34,13 +34,42 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const res = await fetch("/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        const errorMsg =
+          data.error?.message ||
+          data.error?.details?.[0]?.issue ||
+          "Failed to sign in. Please check your credentials.";
+        throw new Error(errorMsg);
+      }
+
+      if (data.data?.token) {
+        localStorage.setItem("token", data.data.token);
+        if (data.data.user) {
+          localStorage.setItem("user", JSON.stringify(data.data.user));
+        }
+      }
+
       setSuccess(true);
       setTimeout(() => {
         router.push("/dashboard");
       }, 700);
-    }, 700);
+    } catch (err: any) {
+      setError(err.message || "Failed to sign in. Please verify your credentials.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -99,15 +128,16 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Username Field */}
+        {/* Email Field */}
         <Input
-          id="login-username"
-          label="Username"
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="e.g. traveler_alex"
-          leftIcon={<User className="w-4 h-4 text-teal-primary/70" />}
+          id="login-email"
+          label="Email Address"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="e.g. traveler@globetrotter.io"
+          leftIcon={<Mail className="w-4 h-4 text-teal-primary/70" />}
+          required
         />
 
         {/* Password Field */}
@@ -119,12 +149,16 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
             >
               Password
             </label>
-            <a
+            <Link
               href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                alert("Password reset instructions will be sent to your registered email.");
+              }}
               className="font-sans text-xs text-teal-primary hover:text-teal-hover hover:underline transition-colors"
             >
               Forgot Password?
-            </a>
+            </Link>
           </div>
           <Input
             id="login-password"
@@ -133,6 +167,7 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••••••"
             leftIcon={<Lock className="w-4 h-4 text-teal-primary/70" />}
+            required
             rightIcon={
               <button
                 type="button"
@@ -174,7 +209,7 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
           rightIcon={<ArrowRight className="w-4 h-4" />}
           className="w-full mt-2"
         >
-          Login Button
+          Sign In to Passport
         </Button>
       </form>
 

@@ -14,6 +14,9 @@ import {
   UserCheck,
   ArrowRight,
   Upload,
+  Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button, Input, Textarea, Card, Badge, Alert } from "@/components/ui";
 
@@ -27,12 +30,14 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     firstName: "",
     lastName: "",
     email: "",
+    password: "",
     phone: "",
     city: "",
     country: "",
     additionalInfo: "",
   });
 
+  const [showPassword, setShowPassword] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -56,7 +61,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -68,15 +73,62 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
       setError("Please enter a valid email address.");
       return;
     }
+    if (!formData.password || formData.password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+    if (!formData.phone.trim()) {
+      setError("Please enter your phone number.");
+      return;
+    }
+    if (!formData.city.trim() || !formData.country.trim()) {
+      setError("Please specify your city and country.");
+      return;
+    }
 
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const res = await fetch("/api/v1/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          email: formData.email.trim(),
+          password: formData.password,
+          phoneNumber: formData.phone.trim(),
+          city: formData.city.trim(),
+          country: formData.country.trim(),
+          additionalInfo: formData.additionalInfo?.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        const errorMsg =
+          data.error?.message ||
+          data.error?.details?.[0]?.issue ||
+          "Registration failed. Please check your information.";
+        throw new Error(errorMsg);
+      }
+
+      if (data.data?.token) {
+        localStorage.setItem("token", data.data.token);
+        if (data.data.user) {
+          localStorage.setItem("user", JSON.stringify(data.data.user));
+        }
+      }
+
       setSuccess(true);
       setTimeout(() => {
         router.push("/dashboard");
       }, 700);
-    }, 700);
+    } catch (err: any) {
+      setError(err.message || "Registration failed. Please check your data.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -150,7 +202,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
       {success && (
         <div className="mb-5">
           <Alert variant="success" badgeText="PASSPORT CREATED">
-            Welcome aboard! Your passport has been accredited.
+            Welcome aboard! Your passport has been accredited. Redirecting to Dashboard...
           </Alert>
         </div>
       )}
@@ -166,6 +218,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             onChange={handleChange}
             placeholder="First Name"
             leftIcon={<UserCheck className="w-4 h-4 text-teal-primary/70" />}
+            required
           />
           <Input
             id="lastName"
@@ -175,6 +228,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             onChange={handleChange}
             placeholder="Last Name"
             leftIcon={<UserCheck className="w-4 h-4 text-teal-primary/70" />}
+            required
           />
         </div>
 
@@ -189,6 +243,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             onChange={handleChange}
             placeholder="Email Address"
             leftIcon={<Mail className="w-4 h-4 text-teal-primary/70" />}
+            required
           />
           <Input
             id="phone"
@@ -197,12 +252,47 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             label="Phone Number"
             value={formData.phone}
             onChange={handleChange}
-            placeholder="Phone Number"
+            placeholder="e.g. +1 555 123 4567"
             leftIcon={<Phone className="w-4 h-4 text-teal-primary/70" />}
+            required
           />
         </div>
 
-        {/* Row 3: City & Country */}
+        {/* Row 3: Password */}
+        <div className="space-y-1.5">
+          <label
+            htmlFor="register-password"
+            className="block font-sans text-xs font-semibold text-ink uppercase tracking-wider"
+          >
+            Password
+          </label>
+          <Input
+            id="register-password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="Min. 6 characters"
+            leftIcon={<Lock className="w-4 h-4 text-teal-primary/70" />}
+            required
+            rightIcon={
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-muted-foreground hover:text-ink transition-colors cursor-pointer"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            }
+          />
+        </div>
+
+        {/* Row 4: City & Country */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             id="city"
@@ -210,8 +300,9 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             label="City"
             value={formData.city}
             onChange={handleChange}
-            placeholder="City"
+            placeholder="e.g. San Francisco"
             leftIcon={<MapPin className="w-4 h-4 text-teal-primary/70" />}
+            required
           />
           <Input
             id="country"
@@ -219,8 +310,9 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             label="Country"
             value={formData.country}
             onChange={handleChange}
-            placeholder="Country"
+            placeholder="e.g. United States"
             leftIcon={<Globe className="w-4 h-4 text-teal-primary/70" />}
+            required
           />
         </div>
 
