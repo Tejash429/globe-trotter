@@ -1,0 +1,52 @@
+import { NextResponse } from "next/server";
+import { authenticateRequest } from "@/lib/middlewares/authMiddleware";
+import { TripService } from "@/lib/services/tripService";
+
+export async function GET(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+  const authPayload = authenticateRequest(request);
+  if (!authPayload) {
+    return NextResponse.json({ success: false, error: { code: "UNAUTHORIZED", message: "Authentication required" } }, { status: 401 });
+  }
+
+  const { tripId } = await params;
+
+  try {
+    const trip = await TripService.getTripById(tripId, authPayload.userId);
+    return NextResponse.json({ success: true, data: trip });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: { code: error.code || "NOT_FOUND", message: error.message } }, { status: error.statusCode || 404 });
+  }
+}
+
+export async function PUT(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+  const authPayload = authenticateRequest(request);
+  if (!authPayload) {
+    return NextResponse.json({ success: false, error: { code: "UNAUTHORIZED", message: "Authentication required" } }, { status: 401 });
+  }
+
+  const { tripId } = await params;
+
+  try {
+    const body = await request.json();
+    const updatedTrip = await TripService.updateTrip(tripId, authPayload.userId, body);
+    return NextResponse.json({ success: true, message: "Trip updated successfully", data: updatedTrip });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: { code: error.code || "INTERNAL_SERVER_ERROR", message: error.message } }, { status: error.statusCode || 500 });
+  }
+}
+
+export async function DELETE(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+  const authPayload = authenticateRequest(request);
+  if (!authPayload) {
+    return NextResponse.json({ success: false, error: { code: "UNAUTHORIZED", message: "Authentication required" } }, { status: 401 });
+  }
+
+  const { tripId } = await params;
+
+  try {
+    const result = await TripService.deleteTrip(tripId, authPayload.userId);
+    return NextResponse.json({ success: true, message: result.message });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: { code: error.code || "NOT_FOUND", message: error.message } }, { status: error.statusCode || 404 });
+  }
+}
