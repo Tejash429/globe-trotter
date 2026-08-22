@@ -79,7 +79,7 @@ export function Navbar({ onOpenPlanModal }: NavbarProps) {
             <span>Dashboard</span>
           </Link>
           <Link
-            href="/dashboard"
+            href="/trips"
             className="text-muted-foreground hover:text-teal-primary font-medium flex items-center gap-1.5 transition-colors"
           >
             <span>My Trips</span>
