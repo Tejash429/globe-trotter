@@ -54,9 +54,12 @@ export function Navbar({ onOpenPlanModal }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Logo & Name */}
         <Link href="/dashboard" className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-full bg-teal-primary text-white flex items-center justify-center shadow-xs transition-transform group-hover:scale-105">
-            <Compass className="w-5 h-5" />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/image.png"
+            alt="GlobeTrotter Logo"
+            className="w-9 h-9 object-contain rounded-full shadow-xs transition-transform group-hover:scale-105"
+          />
           <div>
             <span className="font-display text-xl font-bold text-ink tracking-tight block leading-tight">
               GlobeTrotter
