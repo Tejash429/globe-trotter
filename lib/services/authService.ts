@@ -1,6 +1,15 @@
 import { prisma } from "../prisma";
 import { hashPassword, comparePassword, generateToken } from "../auth";
-import { signupSchema, loginSchema, forgotPasswordSchema, SignupInput, LoginInput, ForgotPasswordInput } from "../validations/auth";
+import {
+  signupSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  updateProfileSchema,
+  SignupInput,
+  LoginInput,
+  ForgotPasswordInput,
+  UpdateProfileInput,
+} from "../validations/auth";
 
 export class AuthService {
   static async signup(input: SignupInput) {
@@ -32,22 +41,6 @@ export class AuthService {
         city: validatedData.city,
         additionalInfo: validatedData.additionalInfo,
         role: "USER",
-        language: "en",
-      },
-      select: {
-        id: true,
-        name: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        phoneNumber: true,
-        country: true,
-        city: true,
-        additionalInfo: true,
-        avatarUrl: true,
-        language: true,
-        role: true,
-        createdAt: true,
       },
     });
 
@@ -57,7 +50,9 @@ export class AuthService {
       role: user.role,
     });
 
-    return { user, token };
+    const { passwordHash: _, ...userWithoutPassword } = user;
+
+    return { user: userWithoutPassword, token };
   }
 
   static async login(input: LoginInput) {
@@ -144,6 +139,61 @@ export class AuthService {
       error.code = "NOT_FOUND";
       throw error;
     }
+
+    return user;
+  }
+
+  static async updateProfile(userId: string, input: UpdateProfileInput) {
+    const validatedData = updateProfileSchema.parse(input);
+
+    const updatePayload: any = {};
+    if (validatedData.firstName !== undefined) updatePayload.firstName = validatedData.firstName.trim();
+    if (validatedData.lastName !== undefined) updatePayload.lastName = validatedData.lastName.trim();
+
+    // Auto-update full name if firstName or lastName or name is provided
+    if (validatedData.name) {
+      updatePayload.name = validatedData.name.trim();
+    } else if (validatedData.firstName || validatedData.lastName) {
+      const existing = await prisma.user.findUnique({ where: { id: userId } });
+      const fName = validatedData.firstName !== undefined ? validatedData.firstName : existing?.firstName || "";
+      const lName = validatedData.lastName !== undefined ? validatedData.lastName : existing?.lastName || "";
+      updatePayload.name = `${fName} ${lName}`.trim();
+    }
+
+    if (validatedData.phoneNumber !== undefined) updatePayload.phoneNumber = validatedData.phoneNumber.trim();
+    if (validatedData.country !== undefined) updatePayload.country = validatedData.country.trim();
+    if (validatedData.city !== undefined) updatePayload.city = validatedData.city.trim();
+    if (validatedData.additionalInfo !== undefined) updatePayload.additionalInfo = validatedData.additionalInfo.trim();
+    if (validatedData.language !== undefined) updatePayload.language = validatedData.language;
+    if (validatedData.avatarUrl !== undefined) updatePayload.avatarUrl = validatedData.avatarUrl;
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: updatePayload,
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        name: true,
+        firstName: true,
+        lastName: true,
+        phoneNumber: true,
+        country: true,
+        city: true,
+        additionalInfo: true,
+        avatarUrl: true,
+        language: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            trips: true,
+            savedDestinations: true,
+          },
+        },
+      },
+    });
 
     return user;
   }

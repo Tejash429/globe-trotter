@@ -20,6 +20,19 @@ export const forgotPasswordSchema = z.object({
   email: z.string().email("Invalid email address"),
 });
 
+export const updateProfileSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  name: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  country: z.string().optional(),
+  city: z.string().optional(),
+  additionalInfo: z.string().optional(),
+  language: z.string().optional(),
+  avatarUrl: z.string().optional(),
+});
+
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
